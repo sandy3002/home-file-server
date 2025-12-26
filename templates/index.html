@@ -1,0 +1,147 @@
+{% extends "base.html" %} {% block content %}
+<div class="row">
+  <div class="col-12">
+    <h1 class="mb-4"><i class="bi bi-speedometer2"></i> Dashboard</h1>
+
+    <div class="row g-4">
+      <!-- Quick Stats -->
+      <div class="col-md-4">
+        <div class="card bg-primary text-white">
+          <div class="card-body">
+            <div class="d-flex justify-content-between">
+              <div>
+                <h5 class="card-title">Files Served</h5>
+                <h2 class="card-text" id="file-count">-</h2>
+              </div>
+              <div class="align-self-center">
+                <i class="bi bi-files fs-1"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card bg-success text-white">
+          <div class="card-body">
+            <div class="d-flex justify-content-between">
+              <div>
+                <h5 class="card-title">Media Files</h5>
+                <h2 class="card-text" id="media-count">-</h2>
+              </div>
+              <div class="align-self-center">
+                <i class="bi bi-play-circle fs-1"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card bg-info text-white">
+          <div class="card-body">
+            <div class="d-flex justify-content-between">
+              <div>
+                <h5 class="card-title">Storage Used</h5>
+                <h2 class="card-text" id="storage-used">-</h2>
+              </div>
+              <div class="align-self-center">
+                <i class="bi bi-hdd fs-1"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-5">
+      <div class="col-12">
+        <h3 class="mb-3">Quick Actions</h3>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body text-center">
+                <i class="bi bi-folder-plus fs-1 text-primary"></i>
+                <h5 class="card-title mt-3">Browse Files</h5>
+                <p class="card-text">Navigate and manage your files</p>
+                <a href="{{ url_for('browse_files') }}" class="btn btn-primary">
+                  <i class="bi bi-folder"></i> Browse
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body text-center">
+                <i class="bi bi-cloud-upload fs-1 text-success"></i>
+                <h5 class="card-title mt-3">Upload Files</h5>
+                <p class="card-text">Add new files to your server</p>
+                <a href="{{ url_for('upload_file') }}" class="btn btn-success">
+                  <i class="bi bi-upload"></i> Upload
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body text-center">
+                <i class="bi bi-play-btn fs-1 text-info"></i>
+                <h5 class="card-title mt-3">Stream Media</h5>
+                <p class="card-text">Watch videos and listen to music</p>
+                <a href="{{ url_for('browse_files') }}" class="btn btn-info">
+                  <i class="bi bi-play-circle"></i> Stream
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Files -->
+    <div class="row mt-5">
+      <div class="col-12">
+        <h3 class="mb-3">Recent Activity</h3>
+        <div class="card">
+          <div class="card-body">
+            <div id="recent-files">
+              <p class="text-muted text-center">Loading recent files...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  // Load dashboard stats
+  function loadStats() {
+    // This would typically fetch from an API endpoint
+    // For now, we'll show placeholder values
+    document.getElementById("file-count").textContent = "—";
+    document.getElementById("media-count").textContent = "—";
+    document.getElementById("storage-used").textContent = "—";
+
+    // Load recent files
+    const recentFilesDiv = document.getElementById("recent-files");
+    recentFilesDiv.innerHTML = `
+        <p class="text-muted text-center">
+            <i class="bi bi-info-circle"></i>
+            Start browsing files to see recent activity here
+        </p>
+        <div class="text-center">
+            <a href="/browse" class="btn btn-primary">
+                <i class="bi bi-folder"></i> Browse Files
+            </a>
+        </div>
+    `;
+  }
+
+  // Load stats when page loads
+  document.addEventListener("DOMContentLoaded", loadStats);
+</script>
+{% endblock %}

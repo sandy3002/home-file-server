@@ -1,0 +1,1449 @@
+{% extends "base.html" %} {% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1>
+        <i class="bi bi-folder"></i>
+        Browse Files {% if current_path %}
+        <small class="text-muted">/ {{ current_path }}</small>
+        {% endif %}
+      </h1>
+      <div>
+        <button
+          class="btn btn-success"
+          data-bs-toggle="modal"
+          data-bs-target="#createFolderModal"
+        >
+          <i class="bi bi-folder-plus"></i> New Folder
+        </button>
+        <a href="{{ url_for('upload_file') }}" class="btn btn-primary">
+          <i class="bi bi-upload"></i> Upload Files
+        </a>
+      </div>
+    </div>
+
+    <!-- Navigation Breadcrumb -->
+    {% if current_path %}
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('browse_files') }}">
+            <i class="bi bi-house"></i> Home
+          </a>
+        </li>
+        {% set path_parts = current_path.split('/') %} {% for part in path_parts
+        %} {% if loop.last %}
+        <li class="breadcrumb-item active" aria-current="page">{{ part }}</li>
+        {% else %} {% set partial_path = path_parts[:loop.index] | join('/') %}
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('browse_files', subpath=partial_path) }}"
+            >{{ part }}</a
+          >
+        </li>
+        {% endif %} {% endfor %}
+      </ol>
+    </nav>
+    {% endif %}
+
+    <!-- File List -->
+    <div class="card">
+      <div class="card-body">
+        {% if items %}
+        <!-- File Type Filters -->
+        <div
+          class="mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2"
+        >
+          <div class="btn-group" role="group" aria-label="File type filters">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary active"
+              onclick="filterFiles('all')"
+            >
+              <i class="bi bi-grid"></i> All
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary"
+              onclick="filterFiles('folders')"
+            >
+              <i class="bi bi-folder"></i> Folders
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-info"
+              onclick="filterFiles('images')"
+            >
+              <i class="bi bi-image"></i> Images
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-primary"
+              onclick="filterFiles('videos')"
+            >
+              <i class="bi bi-play-circle"></i> Videos
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-success"
+              onclick="filterFiles('audio')"
+            >
+              <i class="bi bi-music-note"></i> Audio
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-warning"
+              onclick="filterFiles('documents')"
+            >
+              <i class="bi bi-file-text"></i> Documents
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-dark"
+              onclick="filterFiles('others')"
+            >
+              <i class="bi bi-file-earmark"></i> Others
+            </button>
+          </div>
+          <div class="text-muted small">
+            <span id="fileCount"></span>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover" id="filesTable">
+            <thead>
+              <tr>
+                <th><i class="bi bi-file-earmark"></i> Name</th>
+                <th><i class="bi bi-info-circle"></i> Type</th>
+                <th><i class="bi bi-hdd"></i> Size</th>
+                <th><i class="bi bi-gear"></i> Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in items %}
+              <tr
+                {%
+                if
+                item.is_dir
+                %}class="table-light"
+                {%
+                endif
+                %}
+                data-file-type="{% if item.is_parent %}parent{% elif item.is_dir %}folder{% elif item.info.is_image %}image{% elif item.info.is_video %}video{% elif item.info.is_audio %}audio{% elif item.info.is_pdf %}document{% else %}other{% endif %}"
+              >
+                <td>
+                  {% if item.is_parent %}
+                  <i class="bi bi-arrow-up-circle text-secondary"></i>
+                  <a
+                    href="{{ url_for('browse_files', subpath=item.path) }}"
+                    class="text-decoration-none"
+                  >
+                    {{ item.name }}
+                  </a>
+                  {% elif item.is_dir %}
+                  <i class="bi bi-folder-fill text-warning"></i>
+                  <a
+                    href="{{ url_for('browse_files', subpath=item.path) }}"
+                    class="text-decoration-none"
+                  >
+                    {{ item.name }}
+                  </a>
+                  {% else %} {% if item.info.is_video %}
+                  <i class="bi bi-play-circle-fill text-primary"></i>
+                  {% elif item.info.is_audio %}
+                  <i class="bi bi-music-note-beamed text-success"></i>
+                  {% elif item.info.is_image %}
+                  <i class="bi bi-image text-info"></i>
+                  {% elif item.info.is_pdf %}
+                  <i class="bi bi-file-earmark-pdf text-warning"></i>
+                  {% else %}
+                  <i class="bi bi-file-earmark text-secondary"></i>
+                  {% endif %} {{ item.name }} {% endif %}
+                </td>
+                <td>
+                  {% if item.is_dir %}
+                  <span class="badge bg-secondary">Folder</span>
+                  {% elif item.info.is_video %}
+                  <span class="badge bg-primary">Video</span>
+                  {% elif item.info.is_audio %}
+                  <span class="badge bg-success">Audio</span>
+                  {% elif item.info.is_image %}
+                  <span class="badge bg-info">Image</span>
+                  {% elif item.info.is_pdf %}
+                  <span class="badge bg-warning">PDF</span>
+                  {% else %}
+                  <span class="badge bg-light text-dark">File</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if not item.is_dir and not item.is_parent %} {{
+                  item.info.size }} {% else %} — {% endif %}
+                </td>
+                <td>
+                  {% if not item.is_parent %}
+                  <div class="btn-group btn-group-sm" role="group">
+                    {% if not item.is_dir %} {% if item.info.is_image %}
+                    <button
+                      class="btn btn-outline-info"
+                      onclick="previewImage('{{ item.path }}', '{{ item.name }}')"
+                      title="Preview Image"
+                    >
+                      <i class="bi bi-eye"></i>
+                    </button>
+                    {% elif item.info.is_pdf %}
+                    <button
+                      class="btn btn-outline-warning"
+                      onclick="previewPdf('{{ item.path }}', '{{ item.name }}')"
+                      title="Preview PDF"
+                    >
+                      <i class="bi bi-eye"></i>
+                    </button>
+                    {% elif item.info.is_video %}
+                    <button
+                      class="btn btn-outline-primary"
+                      onclick="previewVideo('{{ item.path }}', '{{ item.name }}')"
+                      title="Play Video"
+                    >
+                      <i class="bi bi-play"></i>
+                    </button>
+                    <button
+                      class="btn btn-outline-secondary"
+                      onclick="openWithMpv('{{ item.path }}', '{{ item.name }}')"
+                      title="Open with mpv"
+                    >
+                      <i class="bi bi-terminal"></i>
+                    </button>
+                    {% elif item.info.is_audio %}
+                    <button
+                      class="btn btn-outline-success"
+                      onclick="previewAudio('{{ item.path }}', '{{ item.name }}')"
+                      title="Play Audio"
+                    >
+                      <i class="bi bi-play"></i>
+                    </button>
+                    <button
+                      class="btn btn-outline-secondary"
+                      onclick="openWithMpv('{{ item.path }}', '{{ item.name }}')"
+                      title="Open with mpv"
+                    >
+                      <i class="bi bi-terminal"></i>
+                    </button>
+                    {% endif %} {% if item.info.is_video or item.info.is_audio
+                    %}
+                    <a
+                      href="{{ url_for('stream_media', filepath=item.path) }}"
+                      class="btn btn-outline-primary"
+                      title="Open in Full Player"
+                    >
+                      <i class="bi bi-fullscreen"></i>
+                    </a>
+                    {% endif %}
+                    <a
+                      href="{{ url_for('download_file', filepath=item.path) }}"
+                      class="btn btn-outline-success"
+                      title="Download"
+                    >
+                      <i class="bi bi-download"></i>
+                    </a>
+                    {% endif %}
+                    <button
+                      class="btn btn-outline-danger"
+                      onclick="deleteItem('{{ item.path }}', {{ item.is_dir | tojson | lower }})"
+                      title="Delete"
+                    >
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+          <i class="bi bi-folder-x fs-1 text-muted"></i>
+          <h4 class="text-muted mt-3">No files found</h4>
+          <p class="text-muted">
+            This folder is empty. Upload some files to get started!
+          </p>
+          <a href="{{ url_for('upload_file') }}" class="btn btn-primary">
+            <i class="bi bi-upload"></i> Upload Files
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Folder Modal -->
+<div
+  class="modal fade"
+  id="createFolderModal"
+  tabindex="-1"
+  aria-labelledby="createFolderModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createFolderModalLabel">
+          <i class="bi bi-folder-plus"></i> Create New Folder
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <form id="createFolderForm">
+          <div class="mb-3">
+            <label for="folderName" class="form-label">Folder Name</label>
+            <input type="text" class="form-control" id="folderName" required />
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-primary" onclick="createFolder()">
+          <i class="bi bi-folder-plus"></i> Create
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Image Preview Modal -->
+<div
+  class="modal fade"
+  id="imagePreviewModal"
+  tabindex="-1"
+  aria-labelledby="imagePreviewModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="imagePreviewModalLabel">
+          <i class="bi bi-image"></i> <span id="imageFileName"></span>
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body text-center">
+        <img
+          id="previewImage"
+          class="img-fluid rounded"
+          style="max-height: 70vh"
+          alt="Image Preview"
+        />
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Close
+        </button>
+        <a id="imageDownloadBtn" class="btn btn-success" download>
+          <i class="bi bi-download"></i> Download
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Video Preview Modal -->
+<div
+  class="modal fade"
+  id="videoPreviewModal"
+  tabindex="-1"
+  aria-labelledby="videoPreviewModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="videoPreviewModalLabel">
+          <i class="bi bi-play-circle"></i> <span id="videoFileName"></span>
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="ratio ratio-16x9">
+          <video
+            id="previewVideo"
+            controls
+            class="rounded"
+            style="width: 100%; height: 100%"
+          >
+            Your browser does not support the video tag.
+          </video>
+        </div>
+        <div class="mt-3">
+          <div class="btn-group" role="group">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-primary"
+              onclick="changeVideoSpeed(0.5)"
+            >
+              0.5x
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-primary active"
+              onclick="changeVideoSpeed(1)"
+            >
+              1x
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-primary"
+              onclick="changeVideoSpeed(1.25)"
+            >
+              1.25x
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-primary"
+              onclick="changeVideoSpeed(1.5)"
+            >
+              1.5x
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-primary"
+              onclick="changeVideoSpeed(2)"
+            >
+              2x
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Close
+        </button>
+        <a id="videoDownloadBtn" class="btn btn-success" download>
+          <i class="bi bi-download"></i> Download
+        </a>
+        <a id="videoFullPlayerBtn" class="btn btn-primary">
+          <i class="bi bi-fullscreen"></i> Full Player
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Audio Preview Modal -->
+<div
+  class="modal fade"
+  id="audioPreviewModal"
+  tabindex="-1"
+  aria-labelledby="audioPreviewModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="audioPreviewModalLabel">
+          <i class="bi bi-music-note-beamed"></i>
+          <span id="audioFileName"></span>
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <!-- Audio Visualization -->
+        <div class="text-center mb-4">
+          <div
+            class="bg-dark rounded p-4"
+            style="
+              min-height: 200px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            <div>
+              <i
+                class="bi bi-music-note-beamed text-light"
+                style="font-size: 3rem"
+              ></i>
+              <div class="mt-3">
+                <canvas
+                  id="audioVisualizerPreview"
+                  width="300"
+                  height="80"
+                  style="
+                    background: rgba(255, 255, 255, 0.1);
+                    border-radius: 8px;
+                  "
+                ></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audio Player -->
+        <div class="d-flex justify-content-center mb-4">
+          <audio
+            id="previewAudio"
+            controls
+            class="w-100"
+            style="max-width: 400px"
+          >
+            Your browser does not support the audio element.
+          </audio>
+        </div>
+
+        <!-- Playback Speed Controls -->
+        <div class="text-center">
+          <div class="btn-group" role="group">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-primary"
+              onclick="changeAudioSpeed(0.5)"
+            >
+              0.5x
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-primary active"
+              onclick="changeAudioSpeed(1)"
+            >
+              1x
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-primary"
+              onclick="changeAudioSpeed(1.25)"
+            >
+              1.25x
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-primary"
+              onclick="changeAudioSpeed(1.5)"
+            >
+              1.5x
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-primary"
+              onclick="changeAudioSpeed(2)"
+            >
+              2x
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Close
+        </button>
+        <a id="audioDownloadBtn" class="btn btn-success" download>
+          <i class="bi bi-download"></i> Download
+        </a>
+        <a id="audioFullPlayerBtn" class="btn btn-primary">
+          <i class="bi bi-fullscreen"></i> Full Player
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PDF Preview Modal -->
+<div
+  class="modal fade"
+  id="pdfPreviewModal"
+  tabindex="-1"
+  aria-labelledby="pdfPreviewModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-fullscreen">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pdfPreviewModalLabel">
+          <i class="bi bi-file-earmark-pdf"></i> <span id="pdfFileName"></span>
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="d-flex h-100">
+          <!-- PDF Viewer -->
+          <div class="flex-grow-1">
+            <iframe
+              id="pdfViewer"
+              style="width: 100%; height: 80vh; border: none"
+              title="PDF Viewer"
+            ></iframe>
+          </div>
+
+          <!-- PDF Controls Sidebar -->
+          <div class="bg-light p-3" style="width: 280px; min-height: 80vh">
+            <h6><i class="bi bi-gear"></i> PDF Controls</h6>
+
+            <!-- Zoom Controls -->
+            <div class="mb-3">
+              <label class="form-label"><strong>Zoom:</strong></label>
+              <div class="btn-group-vertical d-grid gap-1" role="group">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary"
+                  onclick="setPdfZoom('fit-width')"
+                >
+                  <i class="bi bi-arrows-expand"></i> Fit Width
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary"
+                  onclick="setPdfZoom('fit-height')"
+                >
+                  <i class="bi bi-arrows-vertical"></i> Fit Height
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary"
+                  onclick="setPdfZoom('fit-page')"
+                >
+                  <i class="bi bi-aspect-ratio"></i> Fit Page
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary"
+                  onclick="setPdfZoom('auto')"
+                >
+                  <i class="bi bi-zoom-in"></i> Auto Zoom
+                </button>
+              </div>
+            </div>
+
+            <!-- View Options -->
+            <div class="mb-3">
+              <label class="form-label"><strong>View Mode:</strong></label>
+              <div class="btn-group-vertical d-grid gap-1" role="group">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary"
+                  onclick="setPdfView('single')"
+                >
+                  <i class="bi bi-file-earmark"></i> Single Page
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary"
+                  onclick="setPdfView('continuous')"
+                >
+                  <i class="bi bi-list"></i> Continuous
+                </button>
+              </div>
+            </div>
+
+            <!-- Theme Toggle -->
+            <div class="mb-3">
+              <label class="form-label"><strong>Display Theme:</strong></label>
+              <div class="btn-group-vertical d-grid gap-1" role="group">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary active"
+                  id="pdfLightModeBtn"
+                  onclick="setPdfTheme('light')"
+                >
+                  <i class="bi bi-brightness-high"></i> Light Mode
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary"
+                  id="pdfDarkModeBtn"
+                  onclick="setPdfTheme('dark')"
+                >
+                  <i class="bi bi-moon"></i> Dark Mode
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary"
+                  id="pdfSepiaModeBtn"
+                  onclick="setPdfTheme('sepia')"
+                >
+                  <i class="bi bi-book"></i> Sepia Mode
+                </button>
+              </div>
+            </div>
+
+            <!-- Navigation Hint -->
+            <div class="alert alert-info small">
+              <h6><i class="bi bi-keyboard"></i> Navigation:</h6>
+              <ul class="mb-0 small">
+                <li><kbd>→</kbd> Next page</li>
+                <li><kbd>←</kbd> Previous page</li>
+                <li><kbd>+</kbd> Zoom in</li>
+                <li><kbd>-</kbd> Zoom out</li>
+                <li><kbd>F</kbd> Fullscreen</li>
+              </ul>
+            </div>
+
+            <!-- PDF Info -->
+            <div class="mt-3">
+              <h6><i class="bi bi-info-circle"></i> File Info</h6>
+              <p class="small mb-1">
+                <strong>Name:</strong> <span id="pdfInfoName"></span>
+              </p>
+              <p class="small mb-0">
+                <strong>Size:</strong> <span id="pdfInfoSize"></span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Close
+        </button>
+        <button type="button" class="btn btn-info" onclick="openPdfInNewTab()">
+          <i class="bi bi-box-arrow-up-right"></i> Open in New Tab
+        </button>
+        <a id="pdfDownloadBtn" class="btn btn-success" download>
+          <i class="bi bi-download"></i> Download
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- mpv Command Modal -->
+<div
+  class="modal fade"
+  id="mpvModal"
+  tabindex="-1"
+  aria-labelledby="mpvModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="mpvModalLabel">
+          <i class="bi bi-terminal"></i> Open with mpv
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-4">
+          <h6><i class="bi bi-info-circle"></i> File Information</h6>
+          <p class="mb-2">
+            <strong>File:</strong> <span id="mpvFileName"></span>
+          </p>
+          <p class="mb-0">
+            <strong>URL:</strong> <code id="mpvFileUrl"></code>
+          </p>
+        </div>
+
+        <div class="mb-4">
+          <h6><i class="bi bi-terminal"></i> mpv Commands</h6>
+
+          <!-- Basic mpv command -->
+          <div class="mb-3">
+            <label class="form-label"
+              ><strong>Basic mpv command:</strong></label
+            >
+            <div class="input-group">
+              <input
+                type="text"
+                class="form-control font-monospace"
+                id="mpvBasicCommand"
+                readonly
+              />
+              <button
+                class="btn btn-outline-secondary"
+                type="button"
+                onclick="copyToClipboard('mpvBasicCommand')"
+              >
+                <i class="bi bi-clipboard"></i> Copy
+              </button>
+            </div>
+          </div>
+
+          <!-- Advanced mpv command -->
+          <div class="mb-3">
+            <label class="form-label"
+              ><strong>Advanced mpv command (with options):</strong></label
+            >
+            <div class="input-group">
+              <input
+                type="text"
+                class="form-control font-monospace"
+                id="mpvAdvancedCommand"
+                readonly
+              />
+              <button
+                class="btn btn-outline-secondary"
+                type="button"
+                onclick="copyToClipboard('mpvAdvancedCommand')"
+              >
+                <i class="bi bi-clipboard"></i> Copy
+              </button>
+            </div>
+          </div>
+
+          <!-- High quality streaming command -->
+          <div class="mb-3">
+            <label class="form-label"
+              ><strong>High quality streaming:</strong></label
+            >
+            <div class="input-group">
+              <input
+                type="text"
+                class="form-control font-monospace"
+                id="mpvStreamCommand"
+                readonly
+              />
+              <button
+                class="btn btn-outline-secondary"
+                type="button"
+                onclick="copyToClipboard('mpvStreamCommand')"
+              >
+                <i class="bi bi-clipboard"></i> Copy
+              </button>
+            </div>
+          </div>
+
+          <!-- Format-specific optimized commands -->
+          <div id="formatSpecificCommands"></div>
+        </div>
+
+        <div class="alert alert-info">
+          <h6><i class="bi bi-lightbulb"></i> Instructions:</h6>
+          <ol class="mb-0">
+            <li>Copy one of the commands above</li>
+            <li>Open a terminal on your computer</li>
+            <li>Paste and run the command</li>
+            <li>mpv will open and start playing the media</li>
+          </ol>
+        </div>
+
+        <div class="alert alert-success">
+          <h6><i class="bi bi-check-circle"></i> Enhanced Format Support:</h6>
+          <ul class="mb-0">
+            <li>
+              <strong>MKV:</strong> Optimized for high-quality video with
+              subtitle support
+            </li>
+            <li><strong>WebM:</strong> GPU acceleration for smooth playback</li>
+            <li>
+              <strong>MP4/AVI:</strong> Hardware acceleration and fast profiles
+            </li>
+            <li><strong>FLAC/WAV:</strong> High-quality audio-only playback</li>
+            <li>
+              <strong>All formats:</strong> Intelligent caching and streaming
+            </li>
+          </ul>
+        </div>
+
+        <div class="alert alert-warning">
+          <h6><i class="bi bi-exclamation-triangle"></i> Requirements:</h6>
+          <ul class="mb-0">
+            <li>mpv must be installed on your system</li>
+            <li>Your computer must have network access to this server</li>
+            <li>For best performance, use a wired connection or strong WiFi</li>
+            <li>Hardware acceleration requires compatible GPU drivers</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Close
+        </button>
+        <button type="button" class="btn btn-primary" onclick="tryLaunchMpv()">
+          <i class="bi bi-rocket"></i> Try Auto-Launch
+        </button>
+        <a id="mpvPlaylistBtn" class="btn btn-info" download>
+          <i class="bi bi-file-earmark-music"></i> Download Playlist
+        </a>
+        <a id="mpvDownloadBtn" class="btn btn-success" download>
+          <i class="bi bi-download"></i> Download File
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  // Existing functions
+  function deleteItem(path, isDir) {
+    const itemType = isDir ? 'folder' : 'file';
+    if (confirm(`Are you sure you want to delete this ${itemType}?`)) {
+      fetch(`/api/delete/${path}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            location.reload();
+          } else {
+            alert(`Error deleting ${itemType}: ${data.error}`);
+          }
+        })
+        .catch((error) => {
+          console.error('Error:', error);
+          alert(`Error deleting ${itemType}`);
+        });
+    }
+  }
+
+  function createFolder() {
+    const folderName = document.getElementById('folderName').value.trim();
+    if (!folderName) {
+      alert('Please enter a folder name');
+      return;
+    }
+
+    const currentPath = '{{ current_path }}';
+
+    fetch('/api/create_folder', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: folderName,
+        path: currentPath,
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          location.reload();
+        } else {
+          alert(`Error creating folder: ${data.error}`);
+        }
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+        alert('Error creating folder');
+      });
+  }
+
+  // File Type Filtering
+  function filterFiles(type) {
+    const table = document.getElementById('filesTable');
+    const rows = table.querySelectorAll('tbody tr');
+    const buttons = document.querySelectorAll('.btn-group button');
+    let visibleCount = 0;
+
+    // Update active button
+    buttons.forEach((btn) => btn.classList.remove('active'));
+    event.target.classList.add('active');
+
+    rows.forEach((row) => {
+      const fileType = row.getAttribute('data-file-type');
+      let shouldShow = false;
+
+      switch (type) {
+        case 'all':
+          shouldShow = true;
+          break;
+        case 'folders':
+          shouldShow = fileType === 'folder';
+          break;
+        case 'images':
+          shouldShow = fileType === 'image';
+          break;
+        case 'videos':
+          shouldShow = fileType === 'video';
+          break;
+        case 'audio':
+          shouldShow = fileType === 'audio';
+          break;
+        case 'documents':
+          shouldShow = fileType === 'document';
+          break;
+        case 'others':
+          shouldShow = fileType === 'other';
+          break;
+      }
+
+      // Always show parent directory (..)
+      if (fileType === 'parent') {
+        shouldShow = true;
+      }
+
+      if (shouldShow) {
+        row.style.display = '';
+        visibleCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    // Update file count
+    const fileCountElement = document.getElementById('fileCount');
+    if (type === 'all') {
+      fileCountElement.textContent = `Showing ${visibleCount} items`;
+    } else {
+      fileCountElement.textContent = `Showing ${visibleCount} ${type}`;
+    }
+  }
+
+  // Initialize file count on page load
+  document.addEventListener('DOMContentLoaded', function () {
+    filterFiles('all');
+  });
+
+  // Media Preview Functions
+  function previewImage(path, filename) {
+    const modal = new bootstrap.Modal(
+      document.getElementById('imagePreviewModal')
+    );
+    const img = document.getElementById('previewImage');
+    const title = document.getElementById('imageFileName');
+    const downloadBtn = document.getElementById('imageDownloadBtn');
+
+    title.textContent = filename;
+    img.src = `/media/${path}`;
+    downloadBtn.href = `/download/${path}`;
+
+    modal.show();
+  }
+
+  function previewVideo(path, filename) {
+    const modal = new bootstrap.Modal(
+      document.getElementById('videoPreviewModal')
+    );
+    const video = document.getElementById('previewVideo');
+    const title = document.getElementById('videoFileName');
+    const downloadBtn = document.getElementById('videoDownloadBtn');
+    const fullPlayerBtn = document.getElementById('videoFullPlayerBtn');
+
+    title.textContent = filename;
+    video.src = `/media/${path}`;
+    downloadBtn.href = `/download/${path}`;
+    fullPlayerBtn.href = `/stream/${path}`;
+
+    // Reset playback speed buttons
+    document
+      .querySelectorAll('#videoPreviewModal .btn-group .btn')
+      .forEach((btn) => {
+        btn.classList.remove('active');
+        if (btn.textContent.trim() === '1x') {
+          btn.classList.add('active');
+        }
+      });
+
+    modal.show();
+  }
+
+  function previewAudio(path, filename) {
+    const modal = new bootstrap.Modal(
+      document.getElementById('audioPreviewModal')
+    );
+    const audio = document.getElementById('previewAudio');
+    const title = document.getElementById('audioFileName');
+    const downloadBtn = document.getElementById('audioDownloadBtn');
+    const fullPlayerBtn = document.getElementById('audioFullPlayerBtn');
+
+    title.textContent = filename;
+    audio.src = `/media/${path}`;
+    downloadBtn.href = `/download/${path}`;
+    fullPlayerBtn.href = `/stream/${path}`;
+
+    // Reset playback speed buttons
+    document
+      .querySelectorAll('#audioPreviewModal .btn-group .btn')
+      .forEach((btn) => {
+        btn.classList.remove('active');
+        if (btn.textContent.trim() === '1x') {
+          btn.classList.add('active');
+        }
+      });
+
+    // Initialize audio visualization
+    initializeAudioVisualizationPreview();
+
+    modal.show();
+  }
+
+  // PDF Preview Functions
+  function previewPdf(path, filename) {
+    const modal = new bootstrap.Modal(
+      document.getElementById('pdfPreviewModal')
+    );
+    const iframe = document.getElementById('pdfViewer');
+    const title = document.getElementById('pdfFileName');
+    const downloadBtn = document.getElementById('pdfDownloadBtn');
+    const infoName = document.getElementById('pdfInfoName');
+    const infoSize = document.getElementById('pdfInfoSize');
+
+    // Set up PDF viewer
+    title.textContent = filename;
+    infoName.textContent = filename;
+    downloadBtn.href = `/download/${path}`;
+
+    // Use PDF.js viewer or direct iframe
+    const pdfUrl = `/media/${path}`;
+    iframe.src = pdfUrl;
+
+    // Get file size info (if available from the current page data)
+    const fileRow = document.querySelector(`[onclick*="${path}"]`);
+    if (fileRow) {
+      const sizeCell = fileRow.closest('tr').children[2];
+      infoSize.textContent = sizeCell ? sizeCell.textContent.trim() : 'Unknown';
+    }
+
+    modal.show();
+  }
+
+  function setPdfZoom(zoomType) {
+    const iframe = document.getElementById('pdfViewer');
+    const currentSrc = iframe.src;
+
+    // Add zoom parameters to PDF URL
+    const url = new URL(currentSrc);
+    switch (zoomType) {
+      case 'fit-width':
+        url.hash = 'zoom=page-width';
+        break;
+      case 'fit-height':
+        url.hash = 'zoom=page-height';
+        break;
+      case 'fit-page':
+        url.hash = 'zoom=page-fit';
+        break;
+      case 'auto':
+        url.hash = 'zoom=auto';
+        break;
+    }
+    iframe.src = url.toString();
+  }
+
+  function setPdfView(viewMode) {
+    const iframe = document.getElementById('pdfViewer');
+    const currentSrc = iframe.src;
+
+    // Add view mode parameters to PDF URL
+    const url = new URL(currentSrc);
+    if (viewMode === 'continuous') {
+      url.hash = url.hash ? url.hash + '&view=FitH' : 'view=FitH';
+    } else {
+      url.hash = url.hash ? url.hash + '&view=Fit' : 'view=Fit';
+    }
+    iframe.src = url.toString();
+  }
+
+  function openPdfInNewTab() {
+    const iframe = document.getElementById('pdfViewer');
+    window.open(iframe.src, '_blank');
+  }
+
+  function setPdfTheme(theme) {
+    const iframe = document.getElementById('pdfViewer');
+    const lightBtn = document.getElementById('pdfLightModeBtn');
+    const darkBtn = document.getElementById('pdfDarkModeBtn');
+    const sepiaBtn = document.getElementById('pdfSepiaModeBtn');
+
+    // Remove active class from all buttons
+    lightBtn.classList.remove('active');
+    darkBtn.classList.remove('active');
+    sepiaBtn.classList.remove('active');
+
+    // Apply theme styling to iframe
+    switch (theme) {
+      case 'light':
+        iframe.style.filter = 'none';
+        iframe.style.background = 'white';
+        lightBtn.classList.add('active');
+        break;
+      case 'dark':
+        iframe.style.filter = 'invert(1) hue-rotate(180deg)';
+        iframe.style.background = '#1a1a1a';
+        darkBtn.classList.add('active');
+        break;
+      case 'sepia':
+        iframe.style.filter = 'sepia(1) contrast(0.9) brightness(1.1)';
+        iframe.style.background = '#f4ecd8';
+        sepiaBtn.classList.add('active');
+        break;
+    }
+  }
+
+  // mpv Integration Functions
+  function openWithMpv(path, filename) {
+    const modal = new bootstrap.Modal(document.getElementById('mpvModal'));
+    const fileNameSpan = document.getElementById('mpvFileName');
+    const fileUrlSpan = document.getElementById('mpvFileUrl');
+    const basicCmd = document.getElementById('mpvBasicCommand');
+    const advancedCmd = document.getElementById('mpvAdvancedCommand');
+    const streamCmd = document.getElementById('mpvStreamCommand');
+    const downloadBtn = document.getElementById('mpvDownloadBtn');
+    const playlistBtn = document.getElementById('mpvPlaylistBtn');
+    const formatSpecificDiv = document.getElementById('formatSpecificCommands');
+
+    // Get the current server URL and file extension
+    const serverUrl = `${window.location.protocol}//${window.location.host}`;
+    const mediaUrl = `${serverUrl}/media/${path}`;
+    const fileExt = filename.toLowerCase().split('.').pop();
+
+    fileNameSpan.textContent = filename;
+    fileUrlSpan.textContent = mediaUrl;
+    downloadBtn.href = `/download/${path}`;
+    playlistBtn.href = `/mpv/${path}`;
+
+    // Generate standard mpv commands
+    basicCmd.value = `mpv "${mediaUrl}"`;
+    advancedCmd.value = `mpv --cache=yes --cache-secs=10 --hwdec=auto "${mediaUrl}"`;
+    streamCmd.value = `mpv --cache=yes --cache-secs=30 --profile=gpu-hq --scale=ewa_lanczossharp --cscale=ewa_lanczossharp "${mediaUrl}"`;
+
+    // Generate format-specific commands
+    let formatSpecificHTML = '';
+
+    if (fileExt === 'mkv') {
+      formatSpecificHTML = `
+        <div class="mb-3">
+          <label class="form-label"><strong>MKV Optimized (with subtitles):</strong></label>
+          <div class="input-group">
+            <input type="text" class="form-control font-monospace" id="mpvMkvCommand" readonly 
+                   value='mpv --cache=yes --cache-secs=20 --hwdec=auto --vo=gpu --audio-channels=7.1 --sub-auto=fuzzy "${mediaUrl}"'>
+            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('mpvMkvCommand')">
+              <i class="bi bi-clipboard"></i> Copy
+            </button>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label"><strong>MKV with All Subtitles:</strong></label>
+          <div class="input-group">
+            <input type="text" class="form-control font-monospace" id="mpvMkvSubCommand" readonly 
+                   value='mpv --cache=yes --hwdec=auto --sub-auto=all --sub-file-paths=. "${mediaUrl}"'>
+            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('mpvMkvSubCommand')">
+              <i class="bi bi-clipboard"></i> Copy
+            </button>
+          </div>
+        </div>`;
+    } else if (['mp4', 'avi'].includes(fileExt)) {
+      formatSpecificHTML = `
+        <div class="mb-3">
+          <label class="form-label"><strong>${fileExt.toUpperCase()} Optimized:</strong></label>
+          <div class="input-group">
+            <input type="text" class="form-control font-monospace" id="mpvOptimizedCommand" readonly 
+                   value='mpv --cache=yes --cache-secs=15 --hwdec=vaapi --profile=fast "${mediaUrl}"'>
+            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('mpvOptimizedCommand')">
+              <i class="bi bi-clipboard"></i> Copy
+            </button>
+          </div>
+        </div>`;
+    } else if (fileExt === 'webm') {
+      formatSpecificHTML = `
+        <div class="mb-3">
+          <label class="form-label"><strong>WebM Optimized:</strong></label>
+          <div class="input-group">
+            <input type="text" class="form-control font-monospace" id="mpvWebmCommand" readonly 
+                   value='mpv --cache=yes --hwdec=auto --vo=gpu --profile=gpu-hq "${mediaUrl}"'>
+            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('mpvWebmCommand')">
+              <i class="bi bi-clipboard"></i> Copy
+            </button>
+          </div>
+        </div>`;
+    } else if (['flac', 'wav'].includes(fileExt)) {
+      formatSpecificHTML = `
+        <div class="mb-3">
+          <label class="form-label"><strong>High Quality Audio:</strong></label>
+          <div class="input-group">
+            <input type="text" class="form-control font-monospace" id="mpvAudioHqCommand" readonly 
+                   value='mpv --no-video --audio-device=auto --volume=100 "${mediaUrl}"'>
+            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('mpvAudioHqCommand')">
+              <i class="bi bi-clipboard"></i> Copy
+            </button>
+          </div>
+        </div>`;
+    }
+
+    formatSpecificDiv.innerHTML = formatSpecificHTML;
+    modal.show();
+  }
+
+  function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    element.select();
+    element.setSelectionRange(0, 99999); // For mobile devices
+
+    try {
+      document.execCommand('copy');
+
+      // Show feedback
+      const button = element.nextElementSibling;
+      const originalText = button.innerHTML;
+      button.innerHTML = '<i class="bi bi-check"></i> Copied!';
+      button.classList.remove('btn-outline-secondary');
+      button.classList.add('btn-success');
+
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.classList.remove('btn-success');
+        button.classList.add('btn-outline-secondary');
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+      alert('Failed to copy to clipboard. Please select and copy manually.');
+    }
+  }
+
+  function tryLaunchMpv() {
+    const basicCmd = document.getElementById('mpvBasicCommand').value;
+    const mediaUrl = basicCmd.match(/"([^"]+)"/)[1];
+
+    // Try to open with mpv protocol handler (if available)
+    try {
+      window.open(`mpv://${encodeURIComponent(mediaUrl)}`, '_blank');
+    } catch (e) {
+      // Fallback: try to create a custom protocol link
+      const link = document.createElement('a');
+      link.href = `mpv://${encodeURIComponent(mediaUrl)}`;
+      link.click();
+    }
+
+    // Show instructions for manual launch
+    setTimeout(() => {
+      alert(
+        "If mpv didn't launch automatically, please copy and run the command manually in your terminal."
+      );
+    }, 1000);
+  }
+
+  // Playback speed controls
+  function changeVideoSpeed(rate) {
+    const video = document.getElementById('previewVideo');
+    video.playbackRate = rate;
+
+    // Update active button
+    document
+      .querySelectorAll('#videoPreviewModal .btn-group .btn')
+      .forEach((btn) => {
+        btn.classList.remove('active');
+      });
+    event.target.classList.add('active');
+  }
+
+  function changeAudioSpeed(rate) {
+    const audio = document.getElementById('previewAudio');
+    audio.playbackRate = rate;
+
+    // Update active button
+    document
+      .querySelectorAll('#audioPreviewModal .btn-group .btn')
+      .forEach((btn) => {
+        btn.classList.remove('active');
+      });
+    event.target.classList.add('active');
+  }
+
+  // Audio visualization for preview
+  let audioContextPreview;
+  let analyserPreview;
+  let dataArrayPreview;
+
+  function initializeAudioVisualizationPreview() {
+    const audio = document.getElementById('previewAudio');
+    const canvas = document.getElementById('audioVisualizerPreview');
+    const ctx = canvas.getContext('2d');
+
+    audio.addEventListener('play', function () {
+      if (!audioContextPreview) {
+        audioContextPreview = new (window.AudioContext ||
+          window.webkitAudioContext)();
+        analyserPreview = audioContextPreview.createAnalyser();
+
+        const source = audioContextPreview.createMediaElementSource(audio);
+        source.connect(analyserPreview);
+        analyserPreview.connect(audioContextPreview.destination);
+
+        analyserPreview.fftSize = 256;
+        dataArrayPreview = new Uint8Array(analyserPreview.frequencyBinCount);
+
+        visualizePreview();
+      }
+
+      if (audioContextPreview.state === 'suspended') {
+        audioContextPreview.resume();
+      }
+    });
+
+    function visualizePreview() {
+      requestAnimationFrame(visualizePreview);
+
+      if (analyserPreview) {
+        analyserPreview.getByteFrequencyData(dataArrayPreview);
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const barWidth = (canvas.width / dataArrayPreview.length) * 2.5;
+        let x = 0;
+
+        for (let i = 0; i < dataArrayPreview.length; i++) {
+          const barHeight = (dataArrayPreview[i] / 255) * canvas.height;
+
+          const r = barHeight + 25 * (i / dataArrayPreview.length);
+          const g = 250 * (i / dataArrayPreview.length);
+          const b = 50;
+
+          ctx.fillStyle = `rgb(${r},${g},${b})`;
+          ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+
+          x += barWidth + 1;
+        }
+      }
+    }
+  }
+
+  // Cleanup media when modals are closed
+  document
+    .getElementById('videoPreviewModal')
+    .addEventListener('hidden.bs.modal', function () {
+      const video = document.getElementById('previewVideo');
+      video.pause();
+      video.src = '';
+    });
+
+  document
+    .getElementById('audioPreviewModal')
+    .addEventListener('hidden.bs.modal', function () {
+      const audio = document.getElementById('previewAudio');
+      audio.pause();
+      audio.src = '';
+    });
+
+  document
+    .getElementById('pdfPreviewModal')
+    .addEventListener('hidden.bs.modal', function () {
+      const iframe = document.getElementById('pdfViewer');
+      iframe.src = '';
+    });
+</script>
+{% endblock %}

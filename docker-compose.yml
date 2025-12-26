@@ -1,0 +1,32 @@
+services:
+  home-file-server:
+    build: .
+    container_name: home-file-server
+    ports:
+      - '8080:8080'
+    volumes:
+      # Mount a local directory for persistent file storage
+      - ./data:/app/data
+      # Optional: Mount your existing FileServer directory
+      # - ~/Documents/FileServer:/app/data
+    env_file:
+      - .env
+    environment:
+      - UPLOAD_FOLDER=/app/data
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import requests; requests.get('http://localhost:8080', timeout=3)",
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+networks:
+  default:
+    driver: bridge

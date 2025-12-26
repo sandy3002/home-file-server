@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register - Home File Server</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+    />
+    <style>
+      /* Light Theme (default) */
+      :root {
+        --bg-primary: #ffffff;
+        --bg-secondary: #f8f9fa;
+        --bg-tertiary: #e9ecef;
+        --text-primary: #212529;
+        --text-secondary: #6c757d;
+        --text-muted: #adb5bd;
+        --border-color: #dee2e6;
+        --link-color: #0d6efd;
+        --link-hover: #0a58ca;
+        --success-color: #198754;
+        --danger-color: #dc3545;
+        --card-bg: #ffffff;
+        --input-bg: #ffffff;
+        --input-border: #ced4da;
+        --shadow: rgba(0, 0, 0, 0.1);
+      }
+
+      /* Dark Theme */
+      [data-theme='dark'] {
+        --bg-primary: #212529;
+        --bg-secondary: #2c3034;
+        --bg-tertiary: #343a40;
+        --text-primary: #f8f9fa;
+        --text-secondary: #adb5bd;
+        --text-muted: #6c757d;
+        --border-color: #495057;
+        --link-color: #6ea8fe;
+        --link-hover: #9ec5fe;
+        --success-color: #75b798;
+        --danger-color: #ea868f;
+        --card-bg: #2c3034;
+        --input-bg: #343a40;
+        --input-border: #495057;
+        --shadow: rgba(0, 0, 0, 0.5);
+      }
+
+      body {
+        background-color: var(--bg-secondary);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-primary);
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      .register-container {
+        max-width: 450px;
+        width: 100%;
+        padding: 20px;
+      }
+      .card {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 15px;
+        box-shadow: 0 10px 40px var(--shadow);
+        transition: background-color 0.3s ease;
+      }
+      .card-header {
+        background-color: var(--link-color);
+        color: white;
+        border-radius: 15px 15px 0 0 !important;
+        padding: 30px;
+        text-align: center;
+        transition: background-color 0.3s ease;
+      }
+      .card-header h3 {
+        margin: 0;
+        font-weight: 600;
+      }
+      .card-body {
+        padding: 40px;
+      }
+      .form-label {
+        font-weight: 600;
+      }
+      .form-control {
+        background-color: var(--input-bg);
+        border-color: var(--input-border);
+        color: var(--text-primary);
+        transition: all 0.3s ease;
+      }
+      .form-control:focus {
+        background-color: var(--input-bg);
+        border-color: var(--link-color);
+        color: var(--text-primary);
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+      }
+      .btn-primary {
+        background-color: var(--link-color);
+        border: none;
+        padding: 12px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+      }
+      .btn-primary:hover {
+        background-color: var(--link-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px var(--shadow);
+      }
+      .alert {
+        border-radius: 10px;
+        background-color: var(--bg-tertiary);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+      }
+      .input-group-text {
+        background-color: var(--bg-tertiary);
+        border: 1px solid var(--input-border);
+        border-right: none;
+        color: var(--text-secondary);
+        transition: all 0.3s ease;
+      }
+      .form-control {
+        border-left: none;
+      }
+      .password-strength {
+        height: 5px;
+        border-radius: 3px;
+        margin-top: 5px;
+        transition: all 0.3s;
+      }
+      .text-muted {
+        color: var(--text-muted) !important;
+      }
+      a {
+        color: var(--link-color);
+      }
+      a:hover {
+        color: var(--link-hover);
+      }
+      [data-theme='dark'] .btn-close {
+        filter: invert(1);
+      }
+      .footer-text {
+        color: var(--text-secondary);
+      }
+      /* Theme toggle button */
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 50px;
+        padding: 8px 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px var(--shadow);
+      }
+      .theme-toggle:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px var(--shadow);
+      }
+      .theme-toggle i {
+        font-size: 1.2rem;
+        color: var(--text-primary);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Theme Toggle Button -->
+    <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+      <i class="bi bi-sun-fill" id="themeIcon"></i>
+    </button>
+
+    <div class="register-container">
+      <div class="card">
+        <div class="card-header">
+          <i class="bi bi-person-plus fs-1"></i>
+          <h3 class="mt-2">Create Account</h3>
+          <p class="mb-0">Join Home File Server</p>
+        </div>
+        <div class="card-body">
+          {% with messages = get_flashed_messages(with_categories=true) %} {% if
+          messages %} {% for category, message in messages %}
+          <div
+            class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show"
+            role="alert"
+          >
+            <i
+              class="bi bi-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }}"
+            ></i>
+            {{ message }}
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="alert"
+            ></button>
+          </div>
+          {% endfor %} {% endif %} {% endwith %}
+
+          <form
+            method="POST"
+            action="{{ url_for('register') }}"
+            id="registerForm"
+          >
+            <div class="mb-3">
+              <label for="username" class="form-label">
+                <i class="bi bi-person"></i> Username
+              </label>
+              <div class="input-group">
+                <span class="input-group-text">
+                  <i class="bi bi-person-fill"></i>
+                </span>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="username"
+                  name="username"
+                  placeholder="Choose a username"
+                  required
+                  autofocus
+                />
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="password" class="form-label">
+                <i class="bi bi-lock"></i> Password
+              </label>
+              <div class="input-group">
+                <span class="input-group-text">
+                  <i class="bi bi-lock-fill"></i>
+                </span>
+                <input
+                  type="password"
+                  class="form-control"
+                  id="password"
+                  name="password"
+                  placeholder="Create a password"
+                  required
+                />
+              </div>
+              <div class="password-strength" id="passwordStrength"></div>
+            </div>
+
+            <div class="mb-4">
+              <label for="confirm_password" class="form-label">
+                <i class="bi bi-lock-fill"></i> Confirm Password
+              </label>
+              <div class="input-group">
+                <span class="input-group-text">
+                  <i class="bi bi-lock-fill"></i>
+                </span>
+                <input
+                  type="password"
+                  class="form-control"
+                  id="confirm_password"
+                  name="confirm_password"
+                  placeholder="Confirm your password"
+                  required
+                />
+              </div>
+              <small class="text-muted" id="passwordMatch"></small>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="bi bi-person-plus"></i> Create Account
+            </button>
+          </form>
+
+          <hr class="my-4" />
+
+          <div class="text-center">
+            <p class="text-muted mb-0">
+              Already have an account?
+              <a
+                href="{{ url_for('login') }}"
+                class="text-decoration-none fw-bold"
+              >
+                Sign in
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center mt-3">
+        <p class="footer-text">
+          <i class="bi bi-shield-check"></i>
+          Your data is secure and encrypted
+        </p>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Theme Toggle Script -->
+    <script>
+      // Initialize theme from localStorage or default to light
+      const initTheme = () => {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeIcon(savedTheme);
+      };
+
+      // Update theme icon based on current theme
+      const updateThemeIcon = (theme) => {
+        const themeIcon = document.getElementById('themeIcon');
+        if (theme === 'dark') {
+          themeIcon.className = 'bi bi-moon-fill';
+        } else {
+          themeIcon.className = 'bi bi-sun-fill';
+        }
+      };
+
+      // Toggle theme
+      const toggleTheme = () => {
+        const currentTheme =
+          document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeIcon(newTheme);
+      };
+
+      // Initialize theme on page load
+      initTheme();
+
+      // Add click event listener to theme toggle button
+      document
+        .getElementById('themeToggle')
+        .addEventListener('click', toggleTheme);
+    </script>
+
+    <script>
+      // Password strength indicator
+      const password = document.getElementById('password');
+      const strengthBar = document.getElementById('passwordStrength');
+      const confirmPassword = document.getElementById('confirm_password');
+      const passwordMatch = document.getElementById('passwordMatch');
+
+      password.addEventListener('input', function () {
+        const val = this.value;
+        let strength = 0;
+
+        if (val.length >= 6) strength += 25;
+        if (val.length >= 10) strength += 25;
+        if (/[a-z]/.test(val) && /[A-Z]/.test(val)) strength += 25;
+        if (/\d/.test(val)) strength += 25;
+
+        strengthBar.style.width = strength + '%';
+
+        if (strength < 50) {
+          strengthBar.style.backgroundColor = '#dc3545';
+        } else if (strength < 75) {
+          strengthBar.style.backgroundColor = '#ffc107';
+        } else {
+          strengthBar.style.backgroundColor = '#28a745';
+        }
+      });
+
+      // Password match checker
+      confirmPassword.addEventListener('input', function () {
+        if (this.value === password.value && this.value.length > 0) {
+          passwordMatch.textContent = '✓ Passwords match';
+          passwordMatch.style.color = '#28a745';
+        } else if (this.value.length > 0) {
+          passwordMatch.textContent = '✗ Passwords do not match';
+          passwordMatch.style.color = '#dc3545';
+        } else {
+          passwordMatch.textContent = '';
+        }
+      });
+
+      // Form validation
+      document
+        .getElementById('registerForm')
+        .addEventListener('submit', function (e) {
+          if (password.value !== confirmPassword.value) {
+            e.preventDefault();
+            alert('Passwords do not match!');
+          }
+        });
+    </script>
+  </body>
+</html>

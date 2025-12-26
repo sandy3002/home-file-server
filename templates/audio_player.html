@@ -1,0 +1,322 @@
+{% extends "base.html" %} {% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1><i class="bi bi-music-note-beamed"></i> Audio Player</h1>
+      <div>
+        <a
+          href="{{ url_for('download_file', filepath=filepath) }}"
+          class="btn btn-success"
+        >
+          <i class="bi bi-download"></i> Download
+        </a>
+        <a
+          href="{{ url_for('browse_files', subpath=filepath.rsplit('/', 1)[0] if '/' in filepath else '') }}"
+          class="btn btn-outline-secondary"
+        >
+          <i class="bi bi-folder"></i> Back to Folder
+        </a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-file-music"></i> {{ filename }}</h5>
+      </div>
+      <div class="card-body">
+        <!-- Audio Visualization Area -->
+        <div class="text-center mb-4">
+          <div
+            class="audio-visual-container p-5 bg-dark rounded"
+            style="
+              min-height: 300px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            <div class="audio-visual">
+              <i
+                class="bi bi-music-note-beamed text-light"
+                style="font-size: 5rem"
+              ></i>
+              <div class="mt-3">
+                <canvas
+                  id="audioVisualizer"
+                  width="400"
+                  height="100"
+                  style="
+                    background: rgba(255, 255, 255, 0.1);
+                    border-radius: 8px;
+                  "
+                ></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audio Player -->
+        <div class="d-flex justify-content-center mb-4">
+          <audio
+            controls
+            class="w-100"
+            id="audioPlayer"
+            style="max-width: 500px"
+          >
+            <source
+              src="{{ url_for('serve_media', filepath=filepath) }}"
+              type="audio/mpeg"
+            />
+            Your browser does not support the audio element.
+          </audio>
+        </div>
+
+        <!-- Playback Controls -->
+        <div class="row">
+          <div class="col-md-6">
+            <h6><i class="bi bi-info-circle"></i> File Information</h6>
+            <ul class="list-unstyled">
+              <li><strong>Filename:</strong> {{ filename }}</li>
+              <li><strong>Path:</strong> {{ filepath }}</li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <h6><i class="bi bi-gear"></i> Playback Speed</h6>
+            <div class="btn-group" role="group">
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-primary"
+                onclick="changePlaybackRate(0.5)"
+              >
+                0.5x
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-primary active"
+                onclick="changePlaybackRate(1)"
+              >
+                1x
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-primary"
+                onclick="changePlaybackRate(1.25)"
+              >
+                1.25x
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-primary"
+                onclick="changePlaybackRate(1.5)"
+              >
+                1.5x
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-primary"
+                onclick="changePlaybackRate(2)"
+              >
+                2x
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audio Controls and Info -->
+    <div class="row mt-4">
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-body">
+            <h6><i class="bi bi-keyboard"></i> Keyboard Shortcuts</h6>
+            <div class="row">
+              <div class="col-6">
+                <ul class="list-unstyled small">
+                  <li><kbd>Space</kbd> - Play/Pause</li>
+                  <li><kbd>←</kbd> - Rewind 10s</li>
+                  <li><kbd>→</kbd> - Forward 10s</li>
+                </ul>
+              </div>
+              <div class="col-6">
+                <ul class="list-unstyled small">
+                  <li><kbd>↑</kbd> - Volume Up</li>
+                  <li><kbd>↓</kbd> - Volume Down</li>
+                  <li><kbd>M</kbd> - Mute/Unmute</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body">
+            <h6><i class="bi bi-activity"></i> Playback Status</h6>
+            <div id="playbackInfo">
+              <p class="mb-1">
+                <strong>Current Time:</strong>
+                <span id="currentTime">00:00</span>
+              </p>
+              <p class="mb-1">
+                <strong>Duration:</strong> <span id="duration">00:00</span>
+              </p>
+              <p class="mb-1">
+                <strong>Speed:</strong> <span id="playbackRate">1x</span>
+              </p>
+              <p class="mb-0">
+                <strong>Volume:</strong> <span id="volume">100%</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  const audio = document.getElementById("audioPlayer");
+  const canvas = document.getElementById("audioVisualizer");
+  const ctx = canvas.getContext("2d");
+
+  let audioContext;
+  let analyser;
+  let dataArray;
+
+  // Initialize audio context and analyser for visualization
+  function initializeAudioVisualization() {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioContext.createAnalyser();
+
+      const source = audioContext.createMediaElementSource(audio);
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
+
+      analyser.fftSize = 256;
+      dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+      visualize();
+    }
+  }
+
+  // Visualize audio frequency data
+  function visualize() {
+    requestAnimationFrame(visualize);
+
+    analyser.getByteFrequencyData(dataArray);
+
+    ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const barWidth = (canvas.width / dataArray.length) * 2.5;
+    let x = 0;
+
+    for (let i = 0; i < dataArray.length; i++) {
+      const barHeight = (dataArray[i] / 255) * canvas.height;
+
+      const r = barHeight + 25 * (i / dataArray.length);
+      const g = 250 * (i / dataArray.length);
+      const b = 50;
+
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+
+      x += barWidth + 1;
+    }
+  }
+
+  // Update playback info
+  function updatePlaybackInfo() {
+    const currentTime = document.getElementById("currentTime");
+    const duration = document.getElementById("duration");
+    const playbackRate = document.getElementById("playbackRate");
+    const volume = document.getElementById("volume");
+
+    if (audio.currentTime && audio.duration) {
+      currentTime.textContent = formatTime(audio.currentTime);
+      duration.textContent = formatTime(audio.duration);
+    }
+    playbackRate.textContent = audio.playbackRate + "x";
+    volume.textContent = Math.round(audio.volume * 100) + "%";
+  }
+
+  function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${minutes.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
+  }
+
+  function changePlaybackRate(rate) {
+    audio.playbackRate = rate;
+    updatePlaybackInfo();
+
+    // Update active button
+    document
+      .querySelectorAll(".btn-group .btn")
+      .forEach((btn) => btn.classList.remove("active"));
+    event.target.classList.add("active");
+  }
+
+  // Event listeners
+  audio.addEventListener("loadedmetadata", updatePlaybackInfo);
+  audio.addEventListener("timeupdate", updatePlaybackInfo);
+  audio.addEventListener("ratechange", updatePlaybackInfo);
+  audio.addEventListener("volumechange", updatePlaybackInfo);
+
+  audio.addEventListener("play", function () {
+    initializeAudioVisualization();
+    if (audioContext.state === "suspended") {
+      audioContext.resume();
+    }
+  });
+
+  // Keyboard controls
+  document.addEventListener("keydown", function (e) {
+    // Only handle shortcuts if audio is focused or no input is focused
+    if (
+      document.activeElement.tagName === "INPUT" ||
+      document.activeElement.tagName === "TEXTAREA"
+    ) {
+      return;
+    }
+
+    switch (e.code) {
+      case "Space":
+        e.preventDefault();
+        if (audio.paused) {
+          audio.play();
+        } else {
+          audio.pause();
+        }
+        break;
+      case "ArrowLeft":
+        e.preventDefault();
+        audio.currentTime = Math.max(0, audio.currentTime - 10);
+        break;
+      case "ArrowRight":
+        e.preventDefault();
+        audio.currentTime = Math.min(audio.duration, audio.currentTime + 10);
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        audio.volume = Math.min(1, audio.volume + 0.1);
+        break;
+      case "ArrowDown":
+        e.preventDefault();
+        audio.volume = Math.max(0, audio.volume - 0.1);
+        break;
+      case "KeyM":
+        e.preventDefault();
+        audio.muted = !audio.muted;
+        break;
+    }
+  });
+
+  // Initialize
+  updatePlaybackInfo();
+</script>
+{% endblock %}
