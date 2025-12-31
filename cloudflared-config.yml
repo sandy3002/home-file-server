@@ -1,0 +1,19 @@
+# Cloudflare Tunnel Configuration Template
+# After creating your tunnel, replace <TUNNEL-ID> and update the credentials file path
+
+tunnel: <TUNNEL-ID>
+credentials-file: /home/yourusername/.cloudflared/<TUNNEL-ID>.json
+
+ingress:
+  # Subdomain - point to your Flask app
+  - hostname: server.yourdomain.com
+    service: http://localhost:8080
+
+  # Catch-all rule (required, must be last)
+  - service: http_status:404
+# Optional: Configure logging
+# logDirectory: /var/log/cloudflared
+# logLevel: info
+
+# Optional: Configure automatic updates
+# no-autoupdate: false

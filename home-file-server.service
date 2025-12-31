@@ -1,0 +1,24 @@
+[Unit]
+Description=Home File Server
+After=network.target mongodb.service
+
+[Service]
+Type=simple
+User=yourusername
+WorkingDirectory=/home/yourusername/home-file-server
+Environment="PATH=/home/yourusername/home-file-server/venv/bin"
+EnvironmentFile=/home/yourusername/home-file-server/.env
+ExecStart=/home/yourusername/home-file-server/venv/bin/python app.py
+Restart=always
+RestartSec=10
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Logging
+StandardOutput=append:/var/log/home-file-server/output.log
+StandardError=append:/var/log/home-file-server/error.log
+
+[Install]
+WantedBy=multi-user.target

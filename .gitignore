@@ -2,3 +2,4 @@
 .venv/
 .env
 pyvenv.cfg
+data/

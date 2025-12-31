@@ -18,8 +18,14 @@ from pymongo import MongoClient
 from datetime import datetime
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024 * 1024  # 1TB max file size
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', 10737418240))  # Default 10GB
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-change-in-production')
+
+# Security configurations
+if os.environ.get('FLASK_ENV') == 'production':
+    app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # MongoDB Configuration
 MONGODB_URI = os.environ.get('MONGODB_URI')
@@ -58,6 +64,15 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def allowed_file(filename):
     """Check if file extension is allowed"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# Security headers middleware
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
 
 # Authentication decorator
 def login_required(f):
@@ -480,7 +495,18 @@ def mpv_launch(filepath):
     return response
 
 if __name__ == '__main__':
+    # Get configuration from environment
+    host = os.environ.get('HOST', '127.0.0.1')
+    port = int(os.environ.get('PORT', 8080))
+    flask_env = os.environ.get('FLASK_ENV', 'development')
+    debug_mode = flask_env != 'production'
+    
     print(f"Starting Home File Server...")
+    print(f"Environment: {flask_env}")
     print(f"Files will be stored in: {UPLOAD_FOLDER}")
-    print(f"Access the dashboard at: http://localhost:8080")
-    app.run(host='0.0.0.0', port=8080, debug=True)
+    print(f"Listening on: {host}:{port}")
+    if not debug_mode:
+        print("⚠️  Running in production mode - debug is disabled")
+        print("⚠️  Make sure SECRET_KEY is set to a secure value!")
+    
+    app.run(host=host, port=port, debug=debug_mode)
