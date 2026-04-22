@@ -64,18 +64,80 @@
       }
 
       .sidebar {
-        height: 100vh;
         background-color: var(--sidebar-bg);
         border-right: 1px solid var(--border-color);
         transition: background-color 0.3s ease;
       }
 
       .main-content {
-        height: 100vh;
-        overflow-y: auto;
         background-color: var(--bg-primary);
         transition: background-color 0.3s ease;
-        padding-top: 70px !important;
+        min-height: 100vh;
+      }
+
+      /* Desktop sidebar */
+      @media (min-width: 768px) {
+        .sidebar {
+          height: 100vh;
+          position: sticky;
+          top: 0;
+          overflow-y: auto;
+        }
+
+        .main-content {
+          height: 100vh;
+          overflow-y: auto;
+          padding-top: 20px !important;
+        }
+      }
+
+      /* Mobile navigation */
+      .mobile-nav-toggle {
+        display: none;
+      }
+
+      @media (max-width: 767px) {
+        .mobile-nav-toggle {
+          display: inline-block;
+        }
+
+        .sidebar {
+          max-height: 0;
+          overflow: hidden;
+          transition: max-height 0.3s ease;
+          border-right: none;
+          border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar.show {
+          max-height: 500px;
+        }
+
+        .main-content {
+          padding-top: 70px !important;
+        }
+
+        .navbar {
+          background-color: var(--bg-primary) !important;
+          border-bottom: 1px solid var(--border-color) !important;
+        }
+
+        .navbar-toggler {
+          padding: 0.25rem 0.5rem;
+          font-size: 1.25rem;
+          line-height: 1;
+          background-color: transparent;
+          border: 1px solid transparent;
+          border-radius: 0.25rem;
+        }
+
+        .navbar-toggler:hover {
+          background-color: var(--bg-secondary);
+        }
+
+        .navbar-brand {
+          margin-right: 0.5rem;
+        }
       }
 
       .file-icon {
@@ -110,6 +172,20 @@
         background-color: var(--bg-tertiary);
       }
 
+      @media (max-width: 767px) {
+        .upload-zone {
+          padding: 20px;
+        }
+
+        .upload-zone .fs-1 {
+          font-size: 2rem !important;
+        }
+
+        .upload-zone h4 {
+          font-size: 1.1rem;
+        }
+      }
+
       /* Theme toggle button */
       .theme-toggle {
         position: fixed;
@@ -133,6 +209,195 @@
       .theme-toggle i {
         font-size: 1.2rem;
         color: var(--text-primary);
+      }
+
+      @media (max-width: 767px) {
+        .theme-toggle {
+          top: 10px;
+          right: 10px;
+          padding: 6px 12px;
+          font-size: 0.9rem;
+        }
+
+        .btn-group {
+          flex-wrap: wrap;
+          width: 100%;
+        }
+
+        .btn-group .btn {
+          min-width: 44px;
+          min-height: 44px;
+          font-size: 0.85rem;
+          padding: 0.4rem 0.6rem;
+          flex: 1 1 auto;
+          min-width: 0;
+        }
+
+        .btn-group-sm .btn {
+          min-width: auto;
+          min-height: 40px;
+          font-size: 0.75rem;
+          padding: 0.35rem 0.5rem;
+        }
+
+        .table {
+          font-size: 0.85rem;
+        }
+
+        .table-responsive {
+          font-size: 0.85rem;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .table td,
+        .table th {
+          padding: 0.5rem 0.25rem;
+        }
+
+        /* Mobile table reorganization - display as card layout */
+        .table {
+          display: block;
+          border-collapse: collapse;
+        }
+
+        .table thead {
+          display: none;
+        }
+
+        .table tbody {
+          display: block;
+        }
+
+        .table tbody tr {
+          display: block;
+          border: 1px solid var(--border-color);
+          border-radius: 8px;
+          margin-bottom: 1rem;
+          padding: 0;
+          overflow: hidden;
+        }
+
+        .table tbody td {
+          display: block;
+          padding: 0.75rem !important;
+          text-align: left;
+          border: none;
+        }
+
+        .table tbody td:first-child {
+          padding: 0.75rem 0.75rem 0.5rem 0.75rem !important;
+          font-weight: 500;
+        }
+
+        .table tbody td:nth-child(2),
+        .table tbody td:nth-child(3) {
+          display: none;
+        }
+
+        .table tbody td:last-child {
+          padding: 0.5rem 0.75rem 0.75rem 0.75rem !important;
+        }
+
+        .table tbody td:last-child .btn-group {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+        }
+
+        .table tbody td:last-child .btn-group .btn {
+          flex: 1 1 calc(33.333% - 0.35rem);
+          min-width: 40px;
+        }
+
+        .modal-header,
+        .modal-footer {
+          flex-wrap: wrap;
+        }
+
+        .modal-body {
+          padding: 1rem;
+        }
+
+        .btn-sm {
+          padding: 0.4rem 0.6rem;
+          min-height: 40px;
+          min-width: 40px;
+        }
+
+        .form-control,
+        .form-select {
+          font-size: 16px;
+          padding: 0.5rem;
+          min-height: 44px;
+        }
+
+        .btn {
+          min-height: 44px;
+          font-size: 0.95rem;
+        }
+
+        h1 {
+          font-size: 1.5rem;
+        }
+
+        h2 {
+          font-size: 1.25rem;
+        }
+
+        h3 {
+          font-size: 1.1rem;
+        }
+
+        .d-flex.justify-content-between.align-items-center {
+          flex-direction: column;
+          align-items: stretch !important;
+          gap: 1rem;
+        }
+
+        .d-flex.justify-content-between.align-items-center > div {
+          display: flex;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+        }
+
+        .d-flex.justify-content-between.align-items-center > div > button,
+        .d-flex.justify-content-between.align-items-center > div > a {
+          flex: 1;
+          min-width: 100px;
+        }
+
+        .breadcrumb {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          white-space: nowrap;
+          font-size: 0.85rem;
+        }
+
+        .card {
+          border-radius: 8px;
+        }
+
+        .navbar-brand {
+          font-size: 1.1rem;
+          font-weight: 600;
+        }
+
+        .gap-2 {
+          gap: 0.5rem !important;
+        }
+
+        .list-group-item {
+          padding: 0.75rem 0.5rem;
+        }
+
+        .ratio {
+          margin-bottom: 1rem;
+        }
+
+        .badge {
+          font-size: 0.7rem;
+          padding: 0.4rem 0.6rem;
+        }
       }
 
       /* Dark theme specific overrides */
@@ -210,6 +475,25 @@
       [data-theme='dark'] a:hover {
         color: var(--link-hover);
       }
+
+      /* Dark theme for mobile navbar */
+      [data-theme='dark'] .navbar {
+        background-color: var(--bg-primary) !important;
+        border-color: var(--border-color) !important;
+      }
+
+      [data-theme='dark'] .navbar-brand {
+        color: var(--text-primary) !important;
+      }
+
+      [data-theme='dark'] .navbar-toggler {
+        color: var(--text-primary);
+        border-color: var(--border-color);
+      }
+
+      [data-theme='dark'] .navbar-toggler:hover {
+        background-color: var(--bg-secondary);
+      }
     </style>
   </head>
   <body>
@@ -218,11 +502,23 @@
       <i class="bi bi-sun-fill" id="themeIcon"></i>
     </button>
 
+    <!-- Mobile Navigation Bar -->
+    <nav class="navbar navbar-expand-md navbar-light sticky-top d-md-none bg-light border-bottom">
+      <div class="container-fluid">
+        <span class="navbar-brand">
+          <i class="bi bi-hdd-network"></i> File Server
+        </span>
+        <button class="navbar-toggler" type="button" id="sidebarToggle" aria-label="Toggle navigation">
+          <i class="bi bi-list"></i>
+        </button>
+      </div>
+    </nav>
+
     <div class="container-fluid">
-      <div class="row">
+      <div class="row g-0">
         <!-- Sidebar -->
-        <div class="col-md-3 col-lg-2 sidebar p-3">
-          <h4 class="text-center mb-4">
+        <div class="col-12 col-md-3 col-lg-2 sidebar p-3" id="sidebar">
+          <h4 class="text-center mb-4 d-none d-md-block">
             <i class="bi bi-hdd-network"></i>
             File Server
           </h4>
@@ -251,7 +547,7 @@
 
           <div class="text-muted small">
             <p><strong>Server Info:</strong></p>
-            <p>Host: {{ request.host }}</p>
+            <p>Host: <span class="text-truncate d-block small">{{ request.host }}</span></p>
             <p>Status: <span class="text-success">Online</span></p>
             {% if session.get('username') %}
             <hr class="my-2" />
@@ -268,7 +564,7 @@
         </div>
 
         <!-- Main Content -->
-        <div class="col-md-9 col-lg-10 main-content p-4">
+        <div class="col-12 col-md-9 col-lg-10 main-content p-3 p-md-4">
           {% with messages = get_flashed_messages() %} {% if messages %} {% for
           message in messages %}
           <div
@@ -327,6 +623,22 @@
       document
         .getElementById('themeToggle')
         .addEventListener('click', toggleTheme);
+
+      // Mobile sidebar toggle
+      document.getElementById('sidebarToggle').addEventListener('click', function() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('show');
+      });
+
+      // Close sidebar when a nav link is clicked on mobile
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', function() {
+          const sidebar = document.getElementById('sidebar');
+          if (window.innerWidth < 768) {
+            sidebar.classList.remove('show');
+          }
+        });
+      });
     </script>
 
     {% block scripts %}{% endblock %}

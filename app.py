@@ -43,7 +43,7 @@ except Exception as e:
 
 # Configuration
 UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', os.path.expanduser('~/Documents/FileServer'))
-ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'mp4', 'avi', 'mkv', 'webm', 'mov', 'wmv', 'flv', 'mp3', 'wav', 'flac', 'ogg', 'aac', 'm4a'])
+ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'heic', 'bmp', 'svg', 'mp4', 'avi', 'mkv', 'webm', 'mov', 'wmv', 'flv', 'mp3', 'wav', 'flac', 'ogg', 'aac', 'm4a', 'aiff', 'wma', 'opus'])
 
 # Video and audio format mappings for better MIME type support
 MIME_TYPE_OVERRIDES = {
@@ -55,7 +55,14 @@ MIME_TYPE_OVERRIDES = {
     '.ogg': 'audio/ogg',
     '.aac': 'audio/aac',
     '.m4a': 'audio/mp4',
-    '.pdf': 'application/pdf'
+    '.aiff': 'audio/aiff',
+    '.wma': 'audio/x-ms-wma',
+    '.opus': 'audio/opus',
+    '.pdf': 'application/pdf',
+    '.webp': 'image/webp',
+    '.heic': 'image/heic',
+    '.bmp': 'image/bmp',
+    '.svg': 'image/svg+xml'
 }
 
 # Ensure upload directory exists
@@ -224,6 +231,8 @@ def browse_files(subpath=''):
         # Add parent directory link if not in root
         if subpath:
             parent_path = str(Path(subpath).parent) if str(Path(subpath).parent) != '.' else ''
+            # Normalize parent path to use forward slashes for web
+            parent_path = parent_path.replace(os.sep, '/')
             items.append({
                 'name': '..',
                 'path': parent_path,
@@ -237,7 +246,8 @@ def browse_files(subpath=''):
                 continue
             
             item_path = os.path.join(current_path, item)
-            relative_path = os.path.join(subpath, item) if subpath else item
+            # Use forward slashes for web paths (normalize from os.path.join which uses backslashes on Windows)
+            relative_path = '/'.join(os.path.normpath(os.path.join(subpath, item) if subpath else item).split(os.sep))
             
             if os.path.isdir(item_path):
                 items.append({
@@ -286,6 +296,8 @@ def upload_file():
 @login_required
 def download_file(filepath):
     """Download a file"""
+    # Normalize path separators - convert forward slashes to OS-specific separators
+    filepath = filepath.replace('/', os.sep)
     file_path = os.path.join(UPLOAD_FOLDER, filepath)
     
     # Security check
@@ -300,6 +312,8 @@ def download_file(filepath):
 @login_required
 def stream_media(filepath):
     """Stream video or audio files"""
+    # Normalize path separators - convert forward slashes to OS-specific separators
+    filepath = filepath.replace('/', os.sep)
     file_path = os.path.join(UPLOAD_FOLDER, filepath)
     
     # Security check
@@ -322,6 +336,8 @@ def stream_media(filepath):
 @login_required
 def serve_media(filepath):
     """Serve media files with range support for streaming"""
+    # Normalize path separators - convert forward slashes to OS-specific separators
+    filepath = filepath.replace('/', os.sep)
     file_path = os.path.join(UPLOAD_FOLDER, filepath)
     
     # Security check
@@ -333,7 +349,13 @@ def serve_media(filepath):
     
     # Get file info
     file_size = os.path.getsize(file_path)
-    mime_type = mimetypes.guess_type(file_path)[0] or 'application/octet-stream'
+    
+    # Get MIME type with overrides
+    file_ext = os.path.splitext(file_path)[1].lower()
+    if file_ext in MIME_TYPE_OVERRIDES:
+        mime_type = MIME_TYPE_OVERRIDES[file_ext]
+    else:
+        mime_type = mimetypes.guess_type(file_path)[0] or 'application/octet-stream'
     
     # Handle range requests for video streaming
     range_header = request.headers.get('Range', None)
@@ -377,6 +399,8 @@ def serve_media(filepath):
 @app.route('/api/delete/<path:filepath>', methods=['POST'])
 def delete_file(filepath):
     """Delete a file or directory"""
+    # Normalize path separators - convert forward slashes to OS-specific separators
+    filepath = filepath.replace('/', os.sep)
     file_path = os.path.join(UPLOAD_FOLDER, filepath)
     
     # Security check
@@ -415,6 +439,8 @@ def create_folder():
 @app.route('/api/mpv/command/<path:filepath>')
 def get_mpv_command(filepath):
     """Generate mpv command for a media file"""
+    # Normalize path separators - convert forward slashes to OS-specific separators
+    filepath = filepath.replace('/', os.sep)
     file_path = os.path.join(UPLOAD_FOLDER, filepath)
     
     # Security check
@@ -464,6 +490,8 @@ def get_mpv_command(filepath):
 @app.route('/mpv/<path:filepath>')
 def mpv_launch(filepath):
     """Generate an mpv playlist file for download"""
+    # Normalize path separators - convert forward slashes to OS-specific separators
+    filepath = filepath.replace('/', os.sep)
     file_path = os.path.join(UPLOAD_FOLDER, filepath)
     
     # Security check
