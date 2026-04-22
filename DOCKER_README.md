@@ -65,7 +65,7 @@ services:
       - ./data:/app/data
     environment:
       - FLASK_ENV=development
-    command: python app.py
+    command: python run.py
 EOF
 
 # Start in development mode

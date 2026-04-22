@@ -116,7 +116,7 @@ Save with `Ctrl+O`, then `Ctrl+X`.
 source venv/bin/activate
 
 # Run the app
-python app.py
+python run.py
 ```
 
 Open another terminal and test:
@@ -215,7 +215,7 @@ cloudflared tunnel route dns home-file-server server.yourdomain.com
 # In one terminal, make sure your Flask app is running:
 cd ~/home-file-server
 source venv/bin/activate
-python app.py
+python run.py
 
 # In another terminal, start the tunnel:
 cloudflared tunnel run home-file-server
@@ -528,10 +528,10 @@ sudo nethogs
 
 ```bash
 # Adjust worker threads if needed
-nano ~/home-file-server/app.py
+nano ~/home-file-server/.env
 # Consider using gunicorn for production:
 pip install gunicorn
-gunicorn -w 2 -b 127.0.0.1:8080 app:app
+gunicorn -w 2 -b 127.0.0.1:8080 "app:create_app()"
 ```
 
 ### MongoDB Optimization

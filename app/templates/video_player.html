@@ -5,13 +5,13 @@
       <h1><i class="bi bi-play-circle"></i> Video Player</h1>
       <div>
         <a
-          href="{{ url_for('download_file', filepath=filepath) }}"
+          href="{{ url_for('files.download_file', filepath=filepath) }}"
           class="btn btn-success"
         >
           <i class="bi bi-download"></i> Download
         </a>
         <a
-          href="{{ url_for('browse_files', subpath=filepath.rsplit('/', 1)[0] if '/' in filepath else '') }}"
+          href="{{ url_for('files.browse_files', subpath=filepath.rsplit('/', 1)[0] if '/' in filepath else '') }}"
           class="btn btn-outline-secondary"
         >
           <i class="bi bi-folder"></i> Back to Folder
@@ -27,7 +27,7 @@
         <div class="ratio ratio-16x9">
           <video controls class="rounded" id="videoPlayer">
             <source
-              src="{{ url_for('serve_media', filepath=filepath) }}"
+              src="{{ url_for('media.serve_media', filepath=filepath) }}"
               type="video/mp4"
             />
             Your browser does not support the video tag.

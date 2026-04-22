@@ -24,11 +24,14 @@ A web-based home file server that allows you to manage files and stream media co
 
 ## Configuration
 
-1. **Edit the server settings** in `app.py` if needed:
-
-   - `UPLOAD_FOLDER`: Change the directory where files are stored (default: `~/Documents/FileServer`)
-   - `app.config['SECRET_KEY']`: Change to a secure random string
-   - Host and port settings in the `app.run()` call
+1. **Copy the environment file and edit settings:**
+   ```bash
+   cp .env.example .env
+   ```
+   Edit the `.env` file to customize:
+   - `UPLOAD_FOLDER`: Where files are stored
+   - `SECRET_KEY`: Set to a secure random string
+   - `PORT`: Change the port the server runs on
 
 2. **Create the file storage directory:**
    ```bash
@@ -40,12 +43,12 @@ A web-based home file server that allows you to manage files and stream media co
 1. **Start the server:**
 
    ```bash
-   python app.py
+   python run.py
    ```
 
 2. **Access the dashboard:**
-   - On the same computer: http://localhost:5000
-   - From other devices on your network: http://YOUR_PC_IP:5000
+   - On the same computer: http://localhost:8080
+   - From other devices on your network: http://YOUR_PC_IP:8080
    - To find your PC's IP address:
      - Windows: `ipconfig`
      - macOS/Linux: `ifconfig` or `ip addr show`
@@ -103,15 +106,15 @@ To access your file server from other devices on your network:
 
 ### Common Issues
 
-1. **Port already in use**: Change the port in `app.py` (line with `app.run()`)
+1. **Port already in use**: Change the `PORT` in `.env`
 2. **Permission denied**: Ensure the user has read/write permissions to the upload folder
-3. **Large file uploads failing**: Adjust `MAX_CONTENT_LENGTH` in `app.py`
+3. **Large file uploads failing**: Adjust `MAX_CONTENT_LENGTH` in `.env`
 4. **Video/audio not playing**: Ensure your browser supports the media format
 
 ### File Size Limits
 
 - Default maximum file size: 1GB per file
-- To change: Modify `app.config['MAX_CONTENT_LENGTH']` in `app.py`
+- To change: Modify `MAX_CONTENT_LENGTH` in `.env`
 
 ## Supported File Types
 
@@ -126,7 +129,7 @@ To run in development mode with debug enabled, the server automatically restarts
 
 To run in production:
 
-1. Set `debug=False` in `app.py`
+1. Set `FLASK_ENV=production` in `.env`
 2. Consider using a production WSGI server like Gunicorn
 3. Set up proper logging and error handling
 

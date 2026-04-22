@@ -67,7 +67,7 @@
               <i class="bi bi-x-circle"></i> Clear
             </button>
             <a
-              href="{{ url_for('browse_files') }}"
+              href="{{ url_for('files.browse_files') }}"
               class="btn btn-outline-primary"
             >
               <i class="bi bi-folder"></i> Browse Files
@@ -189,11 +189,12 @@
     handleFiles(files);
   });
 
-  // Click to open file dialog
+  // Click to open file dialog (but not when clicking the button, which has its own handler)
   uploadZone.addEventListener("click", function (e) {
-    if (e.target === uploadZone || e.target.closest(".upload-content")) {
-      document.getElementById("fileInput").click();
+    if (e.target.closest("button") || e.target.closest("a")) {
+      return;
     }
+    document.getElementById("fileInput").click();
   });
 
   function handleFiles(files) {

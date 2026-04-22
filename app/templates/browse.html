@@ -16,7 +16,7 @@
         >
           <i class="bi bi-folder-plus"></i> New Folder
         </button>
-        <a href="{{ url_for('upload_file') }}" class="btn btn-primary">
+        <a href="{{ url_for('files.upload_file') }}" class="btn btn-primary">
           <i class="bi bi-upload"></i> Upload Files
         </a>
       </div>
@@ -27,7 +27,7 @@
     <nav aria-label="breadcrumb">
       <ol class="breadcrumb">
         <li class="breadcrumb-item">
-          <a href="{{ url_for('browse_files') }}">
+          <a href="{{ url_for('files.browse_files') }}">
             <i class="bi bi-house"></i> Home
           </a>
         </li>
@@ -36,7 +36,7 @@
         <li class="breadcrumb-item active" aria-current="page">{{ part }}</li>
         {% else %} {% set partial_path = path_parts[:loop.index] | join('/') %}
         <li class="breadcrumb-item">
-          <a href="{{ url_for('browse_files', subpath=partial_path) }}"
+          <a href="{{ url_for('files.browse_files', subpath=partial_path) }}"
             >{{ part }}</a
           >
         </li>
@@ -135,7 +135,7 @@
                   {% if item.is_parent %}
                   <i class="bi bi-arrow-up-circle text-secondary"></i>
                   <a
-                    href="{{ url_for('browse_files', subpath=item.path) }}"
+                    href="{{ url_for('files.browse_files', subpath=item.path) }}"
                     class="text-decoration-none"
                   >
                     {{ item.name }}
@@ -143,7 +143,7 @@
                   {% elif item.is_dir %}
                   <i class="bi bi-folder-fill text-warning"></i>
                   <a
-                    href="{{ url_for('browse_files', subpath=item.path) }}"
+                    href="{{ url_for('files.browse_files', subpath=item.path) }}"
                     class="text-decoration-none"
                   >
                     {{ item.name }}
@@ -231,7 +231,7 @@
                     {% endif %} {% if item.info.is_video or item.info.is_audio
                     %}
                     <a
-                      href="{{ url_for('stream_media', filepath=item.path) }}"
+                      href="{{ url_for('media.stream_media', filepath=item.path) }}"
                       class="btn btn-outline-primary"
                       title="Open in Full Player"
                     >
@@ -239,7 +239,7 @@
                     </a>
                     {% endif %}
                     <a
-                      href="{{ url_for('download_file', filepath=item.path) }}"
+                      href="{{ url_for('files.download_file', filepath=item.path) }}"
                       class="btn btn-outline-success"
                       title="Download"
                     >
@@ -268,7 +268,7 @@
           <p class="text-muted">
             This folder is empty. Upload some files to get started!
           </p>
-          <a href="{{ url_for('upload_file') }}" class="btn btn-primary">
+          <a href="{{ url_for('files.upload_file') }}" class="btn btn-primary">
             <i class="bi bi-upload"></i> Upload Files
           </a>
         </div>
@@ -1020,6 +1020,7 @@
 
   // Media Preview Functions
   function previewImage(path, filename) {
+    path = path.replace(/\\/g, '/');
     const modal = new bootstrap.Modal(
       document.getElementById('imagePreviewModal')
     );
@@ -1028,13 +1029,14 @@
     const downloadBtn = document.getElementById('imageDownloadBtn');
 
     title.textContent = filename;
-    img.src = `/media/${path}`;
-    downloadBtn.href = `/download/${path}`;
+    img.src = `/media/${encodeURI(path)}`;
+    downloadBtn.href = `/download/${encodeURI(path)}`;
 
     modal.show();
   }
 
   function previewVideo(path, filename) {
+    path = path.replace(/\\/g, '/');
     const modal = new bootstrap.Modal(
       document.getElementById('videoPreviewModal')
     );
@@ -1044,9 +1046,9 @@
     const fullPlayerBtn = document.getElementById('videoFullPlayerBtn');
 
     title.textContent = filename;
-    video.src = `/media/${path}`;
-    downloadBtn.href = `/download/${path}`;
-    fullPlayerBtn.href = `/stream/${path}`;
+    video.src = `/media/${encodeURI(path)}`;
+    downloadBtn.href = `/download/${encodeURI(path)}`;
+    fullPlayerBtn.href = `/stream/${encodeURI(path)}`;
 
     // Reset playback speed buttons
     document
@@ -1062,6 +1064,7 @@
   }
 
   function previewAudio(path, filename) {
+    path = path.replace(/\\/g, '/');
     const modal = new bootstrap.Modal(
       document.getElementById('audioPreviewModal')
     );
@@ -1071,9 +1074,9 @@
     const fullPlayerBtn = document.getElementById('audioFullPlayerBtn');
 
     title.textContent = filename;
-    audio.src = `/media/${path}`;
-    downloadBtn.href = `/download/${path}`;
-    fullPlayerBtn.href = `/stream/${path}`;
+    audio.src = `/media/${encodeURI(path)}`;
+    downloadBtn.href = `/download/${encodeURI(path)}`;
+    fullPlayerBtn.href = `/stream/${encodeURI(path)}`;
 
     // Reset playback speed buttons
     document
@@ -1093,6 +1096,7 @@
 
   // PDF Preview Functions
   function previewPdf(path, filename) {
+    path = path.replace(/\\/g, '/');
     const modal = new bootstrap.Modal(
       document.getElementById('pdfPreviewModal')
     );
@@ -1105,10 +1109,10 @@
     // Set up PDF viewer
     title.textContent = filename;
     infoName.textContent = filename;
-    downloadBtn.href = `/download/${path}`;
+    downloadBtn.href = `/download/${encodeURI(path)}`;
 
     // Use PDF.js viewer or direct iframe
-    const pdfUrl = `/media/${path}`;
+    const pdfUrl = `/media/${encodeURI(path)}`;
     iframe.src = pdfUrl;
 
     // Get file size info (if available from the current page data)
@@ -1206,15 +1210,16 @@
     const playlistBtn = document.getElementById('mpvPlaylistBtn');
     const formatSpecificDiv = document.getElementById('formatSpecificCommands');
 
+    path = path.replace(/\\/g, '/');
     // Get the current server URL and file extension
     const serverUrl = `${window.location.protocol}//${window.location.host}`;
-    const mediaUrl = `${serverUrl}/media/${path}`;
+    const mediaUrl = `${serverUrl}/media/${encodeURI(path)}`;
     const fileExt = filename.toLowerCase().split('.').pop();
 
     fileNameSpan.textContent = filename;
     fileUrlSpan.textContent = mediaUrl;
-    downloadBtn.href = `/download/${path}`;
-    playlistBtn.href = `/mpv/${path}`;
+    downloadBtn.href = `/download/${encodeURI(path)}`;
+    playlistBtn.href = `/mpv/${encodeURI(path)}`;
 
     // Generate standard mpv commands
     basicCmd.value = `mpv "${mediaUrl}"`;
