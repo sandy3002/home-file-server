@@ -1,21 +1,56 @@
-# Home File Server - Docker Setup
+# Home File Server — Docker Setup
 
-This application is now containerized with Docker! Here are the different ways to run it:
+Run the Home File Server in a fully isolated Docker container with persistent file storage.
 
-## Quick Start with Docker Compose (Recommended)
+## Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) installed
+- [Docker Compose](https://docs.docker.com/compose/install/) (included with Docker Desktop)
+- A running MongoDB instance (local or remote — see note below)
+
+> **Note:** The Docker image runs the Flask application only. MongoDB is **not** bundled in the image. You must supply a `MONGODB_URI` pointing to an external MongoDB instance (local host, another container, or MongoDB Atlas).
+
+## Quick Start (Docker Compose)
+
+### 1. Configure environment variables
 
 ```bash
-# Build and start the container
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop the container
-docker-compose down
+cp .env.example .env
 ```
 
-The application will be available at http://localhost:8080
+Edit `.env` and set at minimum:
+
+```env
+SECRET_KEY=<your-secure-random-key>
+MONGODB_URI=mongodb://host.docker.internal:27017/   # local MongoDB on the host
+UPLOAD_FOLDER=/app/data                             # path inside the container
+FLASK_ENV=production
+HOST=0.0.0.0
+PORT=8080
+```
+
+> Use `host.docker.internal` to reach MongoDB running on the host machine from inside the container.
+
+### 2. Build and start
+
+```bash
+docker-compose up -d
+```
+
+The application is available at **http://localhost:8080**
+
+### 3. Useful commands
+
+```bash
+# View live logs
+docker-compose logs -f
+
+# Restart the container
+docker-compose restart
+
+# Stop and remove the container
+docker-compose down
+```
 
 ## Manual Docker Commands
 
@@ -28,36 +63,60 @@ docker run -d \
   --name home-file-server \
   -p 8080:8080 \
   -v $(pwd)/data:/app/data \
+  --env-file .env \
+  -e UPLOAD_FOLDER=/app/data \
   home-file-server
 
 # View logs
 docker logs -f home-file-server
 
-# Stop and remove container
+# Stop and remove
 docker stop home-file-server
 docker rm home-file-server
 ```
 
 ## File Storage
 
-- Files are stored in the `./data` directory on your host machine
-- This directory is automatically created and mounted to the container
-- Your files persist even when the container is stopped or removed
+- Files are stored in the `./data/` directory on the **host** machine.
+- This directory is mounted into the container at `/app/data`.
+- Files **persist** even when the container is stopped or removed.
+- To use an existing directory: edit the volume in `docker-compose.yml`:
+  ```yaml
+  volumes:
+    - /your/existing/path:/app/data
+  ```
 
 ## Environment Variables
 
-You can customize the application using environment variables:
+All variables from `.env` are passed into the container via `env_file`. Key variables:
 
-- `UPLOAD_FOLDER`: Path inside container for file storage (default: `/app/data`)
+| Variable             | Value inside container | Description                              |
+|----------------------|------------------------|------------------------------------------|
+| `SECRET_KEY`         | *(your value)*         | Flask session secret                     |
+| `MONGODB_URI`        | *(your value)*         | MongoDB connection string                |
+| `UPLOAD_FOLDER`      | `/app/data`            | File storage path (keep as `/app/data`)  |
+| `FLASK_ENV`          | `production`           | Disables debug mode                      |
+| `HOST`               | `0.0.0.0`              | Bind on all interfaces                   |
+| `PORT`               | `8080`                 | Port exposed by the container            |
+| `MAX_CONTENT_LENGTH` | `10737418240`          | Max upload size (10 GB default)          |
 
-## Development Mode
+## Health Check
 
-To run in development mode with live code reloading:
+The container checks that the application is responding every 30 seconds:
 
 ```bash
-# Create a development docker-compose override
-cat > docker-compose.override.yml << EOF
-version: '3.8'
+# Check health status
+docker ps                               # Shows HEALTHY / UNHEALTHY in STATUS column
+
+# Inspect health details
+docker inspect --format='{{json .State.Health}}' home-file-server
+```
+
+## Development Mode (Live Code Reload)
+
+Create a `docker-compose.override.yml` to mount the source code and enable auto-reload:
+
+```yaml
 services:
   home-file-server:
     volumes:
@@ -66,29 +125,41 @@ services:
     environment:
       - FLASK_ENV=development
     command: python run.py
-EOF
-
-# Start in development mode
-docker-compose up
 ```
 
-## Health Check
-
-The container includes a health check that verifies the application is running properly. Check the health status:
+Then start normally:
 
 ```bash
-docker ps  # Shows health status in the STATUS column
+docker-compose up
 ```
 
 ## Security Notes
 
-- The container runs as a non-root user for security
-- File operations are restricted to the mounted data directory
-- The application is configured for production use by default
+- The container runs as a **non-root user** (`appuser`) for security.
+- File operations are restricted to the `/app/data` mount — path traversal is blocked at the application level.
+- Security response headers (`X-Frame-Options`, `X-XSS-Protection`, `HSTS`, `X-Content-Type-Options`) are set by the app on every request.
+- In `FLASK_ENV=production`, session cookies are `Secure`, `HttpOnly`, and `SameSite=Lax`.
 
 ## Accessing from Other Devices
 
-The server binds to all interfaces (0.0.0.0), so you can access it from other devices on your network using your computer's IP address:
+The server binds to `0.0.0.0` by default in the Docker setup, so other devices on your network can reach it:
 
-- Find your IP: `docker-compose exec home-file-server hostname -I`
-- Access via: `http://YOUR_IP:8080`
+```bash
+# Find your host machine's IP
+ip addr show          # Linux
+ifconfig              # macOS
+
+# Access from another device
+http://<HOST_IP>:8080
+```
+
+## Stopping and Cleanup
+
+```bash
+# Stop container (data is preserved)
+docker-compose down
+
+# Remove container AND delete stored files
+docker-compose down
+rm -rf ./data
+```

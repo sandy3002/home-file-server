@@ -3,3 +3,4 @@
 .env
 pyvenv.cfg
 data/
+.DS_Store

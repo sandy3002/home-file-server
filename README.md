@@ -1,138 +1,233 @@
-# Home File Server Dashboard
+# Home File Server
 
-A web-based home file server that allows you to manage files and stream media content from your old PC.
+A self-hosted web file server built with Flask that lets you browse, upload, download, stream, and manage files from any device on your network — or anywhere on the internet via Cloudflare Tunnel.
 
 ## Features
 
-- **File Management**: Browse, upload, download, and delete files
-- **Media Streaming**: Stream videos and audio files directly in your browser
-- **Folder Management**: Create and organize folders
-- **Drag & Drop Upload**: Easy file uploads with progress tracking
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
-- **Security**: File access is restricted to the designated server directory
+- **Authentication**: User registration and login with bcrypt-hashed passwords stored in MongoDB
+- **File Browsing**: Navigate through directories with a clean file browser UI
+- **File Upload**: Drag-and-drop or click-to-browse uploads with progress tracking; supports multi-file uploads
+- **File Download**: One-click downloads for any file type
+- **File Deletion**: Delete files or empty folders via the browser
+- **Folder Management**: Create new folders from the browser UI
+- **Media Streaming**: In-browser video and audio streaming with HTTP Range request support
+- **MPV Integration**: Generate mpv commands or `.m3u` playlist files to play media in the native mpv player
+- **Image Preview**: View images directly in the browser
+- **PDF Preview**: Inline PDF viewing
+- **Security Headers**: `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `HSTS` applied on every response
+- **Responsive Design**: Works on desktop, tablet, and mobile
 
-## Installation
+## Project Structure
 
-1. **Clone or download this project** to your old PC that will serve as the file server
+```
+home-file-server/
+├── run.py                      # Entry point – loads .env and starts Flask
+├── requirements.txt            # Python dependencies
+├── .env.example                # Environment variable template
+├── Dockerfile                  # Docker image definition
+├── docker-compose.yml          # Docker Compose setup
+├── home-file-server.service    # systemd service unit (Ubuntu)
+├── cloudflared-config.yml      # Cloudflare Tunnel config template
+├── start_server.sh             # Convenience startup script (Linux/macOS)
+├── start_server.bat            # Convenience startup script (Windows)
+├── data/                       # Default file storage directory (Docker)
+└── app/
+    ├── __init__.py             # Application factory (create_app)
+    ├── config.py               # Config class – reads from environment
+    ├── extensions.py           # MongoDB client initialisation
+    ├── security.py             # Security headers + login_required decorator
+    ├── utils.py                # File type helpers, MIME overrides, format_bytes
+    └── routes/
+        ├── auth.py             # /login, /register, /logout
+        ├── main.py             # / (dashboard index)
+        ├── files.py            # /browse, /upload, /download, /api/delete, /api/create_folder
+        └── media.py            # /stream, /media, /mpv, /api/mpv/command
+```
 
-2. **Install Python** (3.7 or higher) if not already installed
+## Prerequisites
 
-3. **Install required packages:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+- Python 3.8+
+- MongoDB (local or remote)
+- pip
+
+## Quick Start
+
+### 1. Clone the repository
+
+```bash
+git clone <your-repo-url> home-file-server
+cd home-file-server
+```
+
+### 2. Create a virtual environment and install dependencies
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 3. Configure environment variables
+
+```bash
+cp .env.example .env
+```
+
+Generate a secure secret key and paste it into `.env`:
+
+```bash
+python3 -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Edit `.env` with your values (see [Configuration](#configuration)).
+
+### 4. Start MongoDB
+
+```bash
+# Ubuntu/Debian
+sudo systemctl start mongod
+
+# macOS (Homebrew)
+brew services start mongodb-community
+```
+
+### 5. Run the server
+
+```bash
+python run.py
+```
+
+The server starts on `http://127.0.0.1:8080` by default.
+
+> To use the convenience script instead: `bash start_server.sh`
 
 ## Configuration
 
-1. **Copy the environment file and edit settings:**
-   ```bash
-   cp .env.example .env
-   ```
-   Edit the `.env` file to customize:
-   - `UPLOAD_FOLDER`: Where files are stored
-   - `SECRET_KEY`: Set to a secure random string
-   - `PORT`: Change the port the server runs on
+All settings are read from environment variables (`.env` file):
 
-2. **Create the file storage directory:**
-   ```bash
-   mkdir -p ~/Documents/FileServer
-   ```
+| Variable             | Default                        | Description                                             |
+|----------------------|--------------------------------|---------------------------------------------------------|
+| `SECRET_KEY`         | `dev-key-change-in-production` | Flask session secret — **always change in production**  |
+| `MONGODB_URI`        | *(required)*                   | MongoDB connection string (e.g. `mongodb://localhost:27017/`) |
+| `UPLOAD_FOLDER`      | `~/Documents/FileServer`       | Directory where uploaded files are stored               |
+| `FLASK_ENV`          | `development`                  | `production` disables debug mode and enables secure cookies |
+| `HOST`               | `127.0.0.1`                    | IP address to bind on (`0.0.0.0` to expose on network)  |
+| `PORT`               | `8080`                         | Port the server listens on                              |
+| `MAX_CONTENT_LENGTH` | `10737418240` (10 GB)          | Maximum upload size in bytes                            |
 
-## Running the Server
-
-1. **Start the server:**
-
-   ```bash
-   python run.py
-   ```
-
-2. **Access the dashboard:**
-   - On the same computer: http://localhost:8080
-   - From other devices on your network: http://YOUR_PC_IP:8080
-   - To find your PC's IP address:
-     - Windows: `ipconfig`
-     - macOS/Linux: `ifconfig` or `ip addr show`
-
-## Usage
-
-### Dashboard
-
-- View server statistics and quick actions
-- Access all main features from the sidebar
-
-### Browse Files
-
-- Navigate through folders
-- View file information (type, size)
-- Download files by clicking the download button
-- Stream videos and audio by clicking the play button
-- Delete files and empty folders
-- Create new folders
-
-### Upload Files
-
-- Drag and drop files onto the upload zone
-- Or click to browse and select files
-- Organize files by specifying a folder path
-- Monitor upload progress
-- Supported formats: MP4, AVI, MKV (video), MP3, WAV, FLAC (audio), JPG, PNG, GIF (images), TXT, PDF (documents)
-
-### Media Streaming
-
-- **Video Player**: Full-featured video player with speed controls, keyboard shortcuts, and fullscreen support
-- **Audio Player**: Audio player with visualization, speed controls, and keyboard shortcuts
-- **Keyboard Shortcuts**:
-  - Space: Play/Pause
-  - Arrow keys: Seek (←/→) and volume (↑/↓)
-  - F: Fullscreen (videos)
-  - M: Mute (audio)
-
-## Network Access
-
-To access your file server from other devices on your network:
-
-1. **Find your PC's local IP address**
-2. **Make sure your firewall allows connections on port 5000**
-3. **Access from other devices using**: http://YOUR_PC_IP:5000
-
-### Security Considerations
-
-- This server is designed for local network use
-- Files are stored in a designated directory to prevent access to system files
-- For internet access, consider setting up a VPN or using additional security measures
-- Change the default secret key before deployment
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Port already in use**: Change the `PORT` in `.env`
-2. **Permission denied**: Ensure the user has read/write permissions to the upload folder
-3. **Large file uploads failing**: Adjust `MAX_CONTENT_LENGTH` in `.env`
-4. **Video/audio not playing**: Ensure your browser supports the media format
-
-### File Size Limits
-
-- Default maximum file size: 1GB per file
-- To change: Modify `MAX_CONTENT_LENGTH` in `.env`
+> Relative paths in `UPLOAD_FOLDER` are resolved relative to the project root. `~` is expanded automatically.
 
 ## Supported File Types
 
-- **Video**: MP4, AVI, MKV
-- **Audio**: MP3, WAV, FLAC
-- **Images**: JPG, JPEG, PNG, GIF
-- **Documents**: TXT, PDF
+| Category   | Extensions                                                          |
+|------------|---------------------------------------------------------------------|
+| Video      | `mp4`, `avi`, `mkv`, `webm`, `mov`, `wmv`, `flv`, `ts`, `m4v`     |
+| Audio      | `mp3`, `wav`, `flac`, `ogg`, `aac`, `m4a`, `aiff`, `wma`, `opus`  |
+| Images     | `png`, `jpg`, `jpeg`, `gif`, `webp`, `heic`, `bmp`, `svg`, `tif`, `tiff` |
+| Documents  | `txt`, `pdf`, `doc`, `docx`, `xls`, `xlsx`, `ppt`, `pptx`, `csv`  |
+| Archives   | `zip`, `rar`, `7z`, `tar`, `gz`                                    |
+| Code/Data  | `py`, `js`, `html`, `css`, `json`, `xml`, `md`, `yml`, `yaml`     |
+
+## Usage
+
+### Authentication
+
+Visit the server URL and register an account. All routes (except login/register) require authentication.
+
+### Browsing Files
+
+Go to `/browse` to navigate folders. From the browser you can:
+- Click folders to navigate into them
+- Download any file
+- Stream video/audio in-browser or launch in mpv
+- Delete files or empty folders
+- Create new folders
+
+### Uploading Files
+
+Go to `/upload`, then drag-and-drop files or click to select. You can optionally specify a sub-folder path to organise uploads. Progress is tracked per file.
+
+### Media Streaming
+
+- **In-browser**: Click the play button on a video or audio file to open the built-in player.
+- **mpv (external)**: Click the mpv button to get command-line options or download an `.m3u` playlist file.
+
+HTTP Range requests are supported for efficient seeking in large video files.
+
+## API Routes
+
+| Method | Path                          | Description                     |
+|--------|-------------------------------|---------------------------------|
+| GET    | `/browse[/<path>]`            | File browser                    |
+| GET    | `/upload`                     | Upload page                     |
+| POST   | `/upload`                     | Upload files (returns JSON)     |
+| GET    | `/download/<path>`            | Download a file                 |
+| POST   | `/api/delete/<path>`          | Delete file or empty folder     |
+| POST   | `/api/create_folder`          | Create a new folder             |
+| GET    | `/stream/<path>`              | Render video/audio player page  |
+| GET    | `/media/<path>`               | Serve media with Range support  |
+| GET    | `/mpv/<path>`                 | Download `.m3u` playlist        |
+| GET    | `/api/mpv/command/<path>`     | Get mpv command JSON            |
+| GET    | `/login`                      | Login page                      |
+| POST   | `/login`                      | Authenticate                    |
+| GET    | `/register`                   | Registration page               |
+| POST   | `/register`                   | Create account                  |
+| GET    | `/logout`                     | Clear session                   |
+
+## Network Access
+
+By default the server binds to `127.0.0.1` (localhost only). To expose it on your local network:
+
+```bash
+# In .env
+HOST=0.0.0.0
+```
+
+Then access from other devices using `http://<YOUR_IP>:8080`.
+
+For internet access, see [UBUNTU_SETUP.md](UBUNTU_SETUP.md) for a full guide using Cloudflare Tunnel.
+
+## Deployment Options
+
+| Method       | Guide                          |
+|--------------|-------------------------------|
+| Docker       | [DOCKER_README.md](DOCKER_README.md) |
+| Ubuntu + systemd + Cloudflare Tunnel | [UBUNTU_SETUP.md](UBUNTU_SETUP.md) |
+
+## Security Considerations
+
+- All file access is sandboxed to `UPLOAD_FOLDER` — path traversal attacks are blocked
+- Passwords are hashed with bcrypt via Werkzeug
+- In `production` mode, session cookies are `Secure`, `HttpOnly`, and `SameSite=Lax`
+- Security headers (`X-Frame-Options`, `X-XSS-Protection`, `HSTS`, `X-Content-Type-Options`) are added to every response
+- Only files with allowed extensions can be uploaded
+- The Cloudflare Tunnel setup means port 8080 never needs to be publicly exposed
+
+## Troubleshooting
+
+| Problem                        | Solution                                                              |
+|-------------------------------|-----------------------------------------------------------------------|
+| Port already in use            | Change `PORT` in `.env`                                               |
+| MongoDB connection error       | Ensure `mongod` is running and `MONGODB_URI` is correct               |
+| Permission denied on upload    | Check read/write permissions on `UPLOAD_FOLDER`                       |
+| File type rejected             | Extension not in `ALLOWED_EXTENSIONS` in `app/utils.py`              |
+| Large uploads failing          | Increase `MAX_CONTENT_LENGTH` in `.env`                               |
+| Video not seeking properly     | Ensure the browser supports the format; try the mpv option            |
 
 ## Development
 
-To run in development mode with debug enabled, the server automatically restarts when you make changes to the code.
+```bash
+# Run with auto-reload (FLASK_ENV=development is set by default)
+python run.py
+```
 
-To run in production:
+To use Gunicorn in production:
 
-1. Set `FLASK_ENV=production` in `.env`
-2. Consider using a production WSGI server like Gunicorn
-3. Set up proper logging and error handling
+```bash
+pip install gunicorn
+gunicorn -w 2 -b 127.0.0.1:8080 "app:create_app()"
+```
 
 ## License
 
-This project is open source. Feel free to modify and distribute as needed.
+Open source. Feel free to modify and distribute as needed.

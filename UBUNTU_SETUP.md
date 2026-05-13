@@ -1,15 +1,15 @@
 # Ubuntu Server Setup with Cloudflare Tunnel
 
-Complete step-by-step guide to deploy your Home File Server on Ubuntu with Cloudflare Tunnel for internet access via mobile hotspot.
+Complete step-by-step guide to deploy the Home File Server on Ubuntu with Cloudflare Tunnel for internet access — works even behind mobile hotspot / CGNAT.
 
 ---
 
 ## Prerequisites
 
-- Ubuntu laptop (18.04 or newer)
-- Internet connection (mobile hotspot is fine!)
-- Domain name (you mentioned you have one)
-- Cloudflare account (free tier works)
+- Ubuntu 20.04 or newer (18.04 should work but is EOL)
+- Internet connection (mobile hotspot is fine)
+- A domain name managed by Cloudflare (or ready to transfer to Cloudflare DNS)
+- A free [Cloudflare account](https://cloudflare.com)
 
 ---
 
@@ -18,39 +18,40 @@ Complete step-by-step guide to deploy your Home File Server on Ubuntu with Cloud
 ### 1. Update System
 
 ```bash
-sudo apt update
-sudo apt upgrade -y
+sudo apt update && sudo apt upgrade -y
 ```
 
 ### 2. Install Required System Packages
 
 ```bash
-# Install Python 3, pip, and development tools
 sudo apt install -y python3 python3-pip python3-venv git curl
+```
 
-# Install MongoDB
+### 3. Install MongoDB
+
+```bash
+# Import MongoDB GPG key
 wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add -
-echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+
+# Add MongoDB repository
+echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/7.0 multiverse" \
+  | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+
+# Install
 sudo apt update
 sudo apt install -y mongodb-org
 
-# Start and enable MongoDB
-sudo systemctl start mongod
+# Enable and start MongoDB
 sudo systemctl enable mongod
-sudo systemctl status mongod  # Should show "active (running)"
+sudo systemctl start mongod
+sudo systemctl status mongod   # Should show "active (running)"
 ```
 
-### 3. Clone Your Project
+### 4. Clone the Project
 
 ```bash
-# Navigate to home directory
 cd ~
-
-# Clone or copy your project
-# If using git:
 git clone <your-repo-url> home-file-server
-# OR copy files manually
-
 cd home-file-server
 ```
 
@@ -58,7 +59,7 @@ cd home-file-server
 
 ## Part 2: Application Setup
 
-### 1. Create Python Virtual Environment
+### 1. Create a Python Virtual Environment
 
 ```bash
 cd ~/home-file-server
@@ -73,10 +74,17 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+Dependencies installed:
+- `Flask==2.3.3`
+- `Werkzeug==2.3.7`
+- `requests==2.31.0`
+- `pymongo==4.6.1`
+- `bcrypt==4.1.2`
+- `python-dotenv==1.0.1`
+
 ### 3. Create Data Directory
 
 ```bash
-# Create directory for file storage
 mkdir -p ~/fileserver-data
 chmod 755 ~/fileserver-data
 ```
@@ -84,7 +92,6 @@ chmod 755 ~/fileserver-data
 ### 4. Configure Environment Variables
 
 ```bash
-# Copy the example env file
 cp .env.example .env
 
 # Generate a secure secret key
@@ -95,9 +102,9 @@ python3 -c "import secrets; print(secrets.token_hex(32))"
 nano .env
 ```
 
-Update the following in `.env`:
+Update `.env` with your values:
 
-```bash
+```env
 SECRET_KEY=<paste-the-generated-secret-key>
 MONGODB_URI=mongodb://localhost:27017/
 UPLOAD_FOLDER=/home/yourusername/fileserver-data
@@ -107,25 +114,42 @@ PORT=8080
 MAX_CONTENT_LENGTH=10737418240
 ```
 
-Save with `Ctrl+O`, then `Ctrl+X`.
+Save with `Ctrl+O`, then exit with `Ctrl+X`.
 
-### 5. Test the Application
+### 5. Fix the systemd Service File
+
+Open `home-file-server.service` and replace `yourusername` with your actual Ubuntu username:
 
 ```bash
-# Make sure virtual environment is activated
-source venv/bin/activate
+nano home-file-server.service
+```
 
-# Run the app
+Change these lines:
+
+```ini
+User=yourusername
+WorkingDirectory=/home/yourusername/home-file-server
+Environment="PATH=/home/yourusername/home-file-server/venv/bin"
+EnvironmentFile=/home/yourusername/home-file-server/.env
+ExecStart=/home/yourusername/home-file-server/venv/bin/python run.py
+```
+
+> **Note:** The service runs `run.py` (not `app.py`). Verify `ExecStart` points to `run.py`.
+
+### 6. Test the Application
+
+```bash
+source venv/bin/activate
 python run.py
 ```
 
-Open another terminal and test:
+In another terminal:
 
 ```bash
 curl http://localhost:8080
 ```
 
-If you see HTML output, it's working! Press `Ctrl+C` to stop the app.
+If you see HTML output the app is working. Press `Ctrl+C` to stop.
 
 ---
 
@@ -133,23 +157,17 @@ If you see HTML output, it's working! Press `Ctrl+C` to stop the app.
 
 ### 1. Add Domain to Cloudflare
 
-1. Go to [cloudflare.com](https://cloudflare.com) and sign up/login
-2. Click "Add a Site" and enter your domain name
-3. Select the Free plan
-4. Copy the nameservers Cloudflare provides
-5. Go to your domain registrar (GoDaddy, Namecheap, etc.) and update nameservers
-6. Wait for DNS propagation (can take up to 48 hours, usually faster)
+1. Log in to [cloudflare.com](https://cloudflare.com)
+2. Click **Add a Site** → enter your domain → select the **Free** plan
+3. Copy the nameservers Cloudflare provides
+4. Update nameservers at your domain registrar (GoDaddy, Namecheap, etc.)
+5. Wait for DNS propagation (up to 48 hours, usually much faster)
 
-### 2. Install Cloudflared on Ubuntu
+### 2. Install `cloudflared` on Ubuntu
 
 ```bash
-# Download cloudflared
 wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-
-# Install it
 sudo dpkg -i cloudflared-linux-amd64.deb
-
-# Verify installation
 cloudflared --version
 ```
 
@@ -159,75 +177,58 @@ cloudflared --version
 cloudflared tunnel login
 ```
 
-This will open a browser window. Log in to Cloudflare and select your domain. The credentials will be saved automatically.
+A browser window opens — log in and select your domain. Credentials are saved to `~/.cloudflared/`.
 
 ### 4. Create the Tunnel
 
 ```bash
-# Create a tunnel named "home-file-server"
 cloudflared tunnel create home-file-server
-
-# Note the tunnel ID that appears (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+# Note the Tunnel ID printed (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
 ```
 
 ### 5. Configure the Tunnel
 
 ```bash
-# Create cloudflared config directory
 mkdir -p ~/.cloudflared
-
-# Copy the template and edit it
 cp cloudflared-config.yml ~/.cloudflared/config.yml
 nano ~/.cloudflared/config.yml
 ```
 
-Update the config with your actual values:
+Update with your actual values:
 
 ```yaml
-tunnel: <YOUR-TUNNEL-ID-FROM-STEP-4>
+tunnel: <YOUR-TUNNEL-ID>
 credentials-file: /home/yourusername/.cloudflared/<YOUR-TUNNEL-ID>.json
 
 ingress:
   - hostname: server.yourdomain.com
     service: http://localhost:8080
-
   - service: http_status:404
 ```
-
-Replace:
-
-- `<YOUR-TUNNEL-ID-FROM-STEP-4>` with actual tunnel ID
-- `yourusername` with your Ubuntu username
-- `server.yourdomain.com` with your actual subdomain
-
-Save with `Ctrl+O`, then `Ctrl+X`.
 
 ### 6. Route DNS to Your Tunnel
 
 ```bash
-# Create DNS record for your subdomain
 cloudflared tunnel route dns home-file-server server.yourdomain.com
 ```
 
 ### 7. Test the Tunnel
 
 ```bash
-# In one terminal, make sure your Flask app is running:
-cd ~/home-file-server
-source venv/bin/activate
-python run.py
+# Terminal 1 — start the Flask app
+cd ~/home-file-server && source venv/bin/activate && python run.py
 
-# In another terminal, start the tunnel:
+# Terminal 2 — start the tunnel
 cloudflared tunnel run home-file-server
 ```
 
-Wait a minute, then visit `https://server.yourdomain.com` in your browser. You should see your login page!
+Visit `https://server.yourdomain.com` in your browser. You should see the login page.
 
-If it works, press `Ctrl+C` in both terminals.
+Press `Ctrl+C` in both terminals when done.
 
 ---
 
-## Part 4: Setup Auto-Start Services
+## Part 4: Auto-Start with systemd
 
 ### 1. Create Log Directory
 
@@ -236,43 +237,22 @@ sudo mkdir -p /var/log/home-file-server
 sudo chown yourusername:yourusername /var/log/home-file-server
 ```
 
-### 2. Setup Flask App Service
+### 2. Install Flask App as a Service
 
 ```bash
-# Edit the service file with your username
-nano home-file-server.service
-```
-
-Replace all occurrences of `yourusername` with your actual Ubuntu username.
-
-```bash
-# Copy service file
 sudo cp home-file-server.service /etc/systemd/system/
-
-# Reload systemd
 sudo systemctl daemon-reload
-
-# Enable and start the service
 sudo systemctl enable home-file-server
 sudo systemctl start home-file-server
-
-# Check status
-sudo systemctl status home-file-server
+sudo systemctl status home-file-server   # Should show "active (running)"
 ```
 
-Should show "active (running)".
-
-### 3. Setup Cloudflare Tunnel Service
+### 3. Install Cloudflare Tunnel as a Service
 
 ```bash
-# Install cloudflared as a service
 sudo cloudflared service install
-
-# Start the service
-sudo systemctl start cloudflared
 sudo systemctl enable cloudflared
-
-# Check status
+sudo systemctl start cloudflared
 sudo systemctl status cloudflared
 ```
 
@@ -280,97 +260,22 @@ sudo systemctl status cloudflared
 
 ## Part 5: Verification & Testing
 
-### 1. Check Services are Running
+### Check All Services
 
 ```bash
-# Check Flask app
 sudo systemctl status home-file-server
-
-# Check Cloudflare tunnel
 sudo systemctl status cloudflared
-
-# Check MongoDB
 sudo systemctl status mongod
 ```
 
-All should show "active (running)".
+All three should show **active (running)**.
 
-### 2. Check Logs
+### Check Logs
 
 ```bash
 # Flask app logs
 tail -f /var/log/home-file-server/output.log
-
-# Cloudflare tunnel logs
-sudo journalctl -u cloudflared -f
-```
-
-### 3. Access Your Server
-
-1. **From the internet**: Visit `https://server.yourdomain.com`
-2. **From your laptop**: Visit `http://localhost:8080`
-
-You should see the login page!
-
-### 4. Create First User Account
-
-1. Visit your domain
-2. Click "Register"
-3. Create your admin account
-
----
-
-## Part 6: Mobile Hotspot Configuration
-
-### Good News!
-
-**No special configuration needed!** Cloudflare Tunnel works perfectly with mobile hotspots because:
-
-- ✅ It creates an outbound connection (no port forwarding needed)
-- ✅ Works behind CGNAT (Carrier-Grade NAT)
-- ✅ Your laptop doesn't need a public IP
-- ✅ Automatic reconnection if connection drops
-
-### Tips for Mobile Hotspot Usage:
-
-```bash
-# Check data usage
-vnstat -d
-
-# Install vnstat if needed
-sudo apt install vnstat
-```
-
-**To reduce data usage:**
-
-- Compress uploaded files before uploading
-- Use lower quality video streaming
-- Consider data limits when sharing with others
-
----
-
-## Part 7: Maintenance & Management
-
-### Start/Stop/Restart Services
-
-```bash
-# Flask app
-sudo systemctl start home-file-server
-sudo systemctl stop home-file-server
-sudo systemctl restart home-file-server
-
-# Cloudflare tunnel
-sudo systemctl start cloudflared
-sudo systemctl stop cloudflared
-sudo systemctl restart cloudflared
-```
-
-### View Logs
-
-```bash
-# Flask app logs
-sudo tail -f /var/log/home-file-server/output.log
-sudo tail -f /var/log/home-file-server/error.log
+tail -f /var/log/home-file-server/error.log
 
 # Cloudflare tunnel logs
 sudo journalctl -u cloudflared -f
@@ -379,23 +284,64 @@ sudo journalctl -u cloudflared -f
 sudo tail -f /var/log/mongodb/mongod.log
 ```
 
-### Update Application
+### Create Your First Account
+
+1. Visit `https://server.yourdomain.com`
+2. Click **Register**
+3. Create your admin account
+
+---
+
+## Part 6: Mobile Hotspot
+
+**No special configuration needed!** Cloudflare Tunnel creates an outbound connection so:
+
+- ✅ No port forwarding required
+- ✅ Works behind CGNAT
+- ✅ No static/public IP needed
+- ✅ Automatically reconnects if the connection drops
+
+To monitor data usage:
+
+```bash
+sudo apt install vnstat
+vnstat -d
+```
+
+---
+
+## Part 7: Maintenance
+
+### Service Management
+
+```bash
+# Flask app
+sudo systemctl start|stop|restart home-file-server
+
+# Cloudflare tunnel
+sudo systemctl start|stop|restart cloudflared
+
+# MongoDB
+sudo systemctl start|stop|restart mongod
+```
+
+### Update the Application
 
 ```bash
 cd ~/home-file-server
-git pull  # or copy new files
+git pull
 source venv/bin/activate
 pip install -r requirements.txt
 sudo systemctl restart home-file-server
 ```
 
-### Backup Database
+### Backup
 
 ```bash
 # Backup MongoDB
 mongodump --out ~/backups/mongodb-$(date +%Y%m%d)
 
-# Backup files
+# Backup uploaded files
 tar -czf ~/backups/fileserver-data-$(date +%Y%m%d).tar.gz ~/fileserver-data/
 ```
 
@@ -403,219 +349,194 @@ tar -czf ~/backups/fileserver-data-$(date +%Y%m%d).tar.gz ~/fileserver-data/
 
 ## Part 8: Security Best Practices
 
-### 1. Firewall Setup (Optional but Recommended)
+### Firewall (UFW)
 
 ```bash
-# Enable UFW firewall
 sudo ufw enable
+sudo ufw allow 22/tcp    # SSH only if needed for remote access
 
-# Allow SSH (if you need remote access)
-sudo ufw allow 22/tcp
-
-# Note: You DON'T need to open port 8080 since Cloudflare Tunnel handles it
-# The app only listens on localhost (127.0.0.1)
-
-# Check firewall status
+# Port 8080 does NOT need to be opened — Cloudflare Tunnel handles all traffic
 sudo ufw status
 ```
 
-### 2. Regular Updates
+### Regular System Updates
 
 ```bash
-# Create a weekly update script
 cat << 'EOF' > ~/update-system.sh
 #!/bin/bash
-sudo apt update
-sudo apt upgrade -y
-sudo apt autoremove -y
+sudo apt update && sudo apt upgrade -y && sudo apt autoremove -y
 cloudflared update
 EOF
 
 chmod +x ~/update-system.sh
 
-# Run weekly
-sudo crontab -e
-# Add: 0 2 * * 0 /home/yourusername/update-system.sh
+# Schedule weekly (Sunday at 02:00)
+(sudo crontab -l 2>/dev/null; echo "0 2 * * 0 /home/yourusername/update-system.sh") | sudo crontab -
 ```
 
-### 3. Monitor Failed Login Attempts
+### Monitor Failed Logins
 
 ```bash
-# Check app logs for failed logins
 grep -i "invalid username or password" /var/log/home-file-server/output.log
 ```
 
-### 4. Strong Passwords
+### Strong Secrets
 
-- Use strong passwords for user accounts
-- Change the SECRET_KEY regularly
-- Never share your .env file
+- Use a strong, randomly generated `SECRET_KEY` (see setup step 4)
+- Never commit `.env` to version control
+- Rotate `SECRET_KEY` periodically (users will need to log in again)
 
 ---
 
-## Part 9: Troubleshooting
+## Part 9: Performance
+
+### Use Gunicorn Instead of Flask's Built-in Server
+
+```bash
+source venv/bin/activate
+pip install gunicorn
+gunicorn -w 2 -b 127.0.0.1:8080 "app:create_app()"
+```
+
+Update `ExecStart` in `home-file-server.service` accordingly:
+
+```ini
+ExecStart=/home/yourusername/home-file-server/venv/bin/gunicorn -w 2 -b 127.0.0.1:8080 "app:create_app()"
+```
+
+### MongoDB Memory Limit (Low-RAM Systems)
+
+```bash
+sudo nano /etc/mongod.conf
+```
+
+Add under `storage`:
+
+```yaml
+storage:
+  wiredTiger:
+    engineConfig:
+      cacheSizeGB: 0.5
+```
+
+Then restart: `sudo systemctl restart mongod`
+
+---
+
+## Part 10: Troubleshooting
 
 ### Application Won't Start
 
 ```bash
-# Check if port is already in use
+# Check port conflicts
 sudo netstat -tlnp | grep 8080
 
-# Check environment variables
+# Check journal for errors
+sudo journalctl -u home-file-server -n 50
+
+# Check environment file
 cat ~/home-file-server/.env
 
 # Check permissions
-ls -la ~/home-file-server/
 ls -la ~/fileserver-data/
-
-# Check Python errors
-sudo journalctl -u home-file-server -n 50
 ```
 
 ### Cloudflare Tunnel Issues
 
 ```bash
-# Check tunnel status
 sudo systemctl status cloudflared
-
-# Test tunnel manually
-cloudflared tunnel run home-file-server
-
-# Check tunnel list
 cloudflared tunnel list
-
-# Re-login if needed
-cloudflared tunnel login
+cloudflared tunnel run home-file-server   # test manually
+cloudflared tunnel login                  # re-auth if credentials expired
 ```
 
 ### MongoDB Issues
 
 ```bash
-# Check MongoDB status
 sudo systemctl status mongod
-
-# Check MongoDB logs
+sudo journalctl -u mongod -n 30
 sudo tail -f /var/log/mongodb/mongod.log
-
-# Restart MongoDB
 sudo systemctl restart mongod
 ```
 
 ### Can't Access from Internet
 
-1. Check DNS propagation: `nslookup server.yourdomain.com`
-2. Check tunnel is running: `sudo systemctl status cloudflared`
-3. Check Flask app is running: `sudo systemctl status home-file-server`
-4. Check Cloudflare dashboard for tunnel status
-5. Test locally first: `curl http://localhost:8080`
+1. `nslookup server.yourdomain.com` — verify DNS points to Cloudflare
+2. `sudo systemctl status cloudflared` — tunnel must be running
+3. `sudo systemctl status home-file-server` — Flask app must be running
+4. `curl http://localhost:8080` — test locally first
+5. Check Cloudflare dashboard → Zero Trust → Access → Tunnels
 
 ### High Mobile Data Usage
 
 ```bash
-# Monitor bandwidth
-sudo apt install iftop
-sudo iftop -i <interface>
-
-# Check which processes use data
+sudo apt install iftop nethogs
+sudo iftop
 sudo nethogs
 ```
 
 ---
 
-## Part 10: Performance Optimization
-
-### For Low-End Laptops
+## Quick Reference
 
 ```bash
-# Adjust worker threads if needed
-nano ~/home-file-server/.env
-# Consider using gunicorn for production:
-pip install gunicorn
-gunicorn -w 2 -b 127.0.0.1:8080 "app:create_app()"
-```
-
-### MongoDB Optimization
-
-```bash
-# Limit MongoDB memory usage (if RAM is limited)
-sudo nano /etc/mongod.conf
-# Add:
-# storage:
-#   wiredTiger:
-#     engineConfig:
-#       cacheSizeGB: 0.5
-```
-
----
-
-## Quick Command Reference
-
-```bash
-# View all services status
+# All service status
 sudo systemctl status home-file-server cloudflared mongod
 
 # Restart everything
-sudo systemctl restart home-file-server cloudflared mongod
+sudo systemctl restart home-file-server cloudflared
 
-# View all logs
+# Follow all logs
 sudo journalctl -f
 
-# Check disk space
+# Disk space
 df -h
 
-# Check memory usage
+# Memory
 free -h
 
-# Monitor system resources
+# System resources
 htop
 ```
 
 ---
 
-## Success Checklist
+## Deployment Checklist
 
-- [ ] Ubuntu updated and packages installed
-- [ ] MongoDB running and enabled
+- [ ] System updated
+- [ ] MongoDB installed, running, and enabled
 - [ ] Python virtual environment created
-- [ ] Dependencies installed
-- [ ] .env file configured with secure SECRET_KEY
-- [ ] Domain added to Cloudflare
-- [ ] Nameservers updated at domain registrar
-- [ ] Cloudflared installed and authenticated
-- [ ] Tunnel created and configured
-- [ ] DNS routes created for domain
-- [ ] Flask app service running
-- [ ] Cloudflare tunnel service running
-- [ ] Can access site from internet via domain
-- [ ] First user account created
-- [ ] Can upload/download files
-- [ ] Can stream media
+- [ ] Dependencies installed (`pip install -r requirements.txt`)
+- [ ] `.env` configured with secure `SECRET_KEY` and correct `MONGODB_URI`
+- [ ] `UPLOAD_FOLDER` directory created with correct permissions
+- [ ] Domain added to Cloudflare, nameservers updated
+- [ ] `cloudflared` installed and authenticated
+- [ ] Tunnel created and `~/.cloudflared/config.yml` updated
+- [ ] DNS route created (`cloudflared tunnel route dns ...`)
+- [ ] `home-file-server.service` updated with correct username
+- [ ] Flask service installed, enabled, and running
+- [ ] Cloudflare tunnel service installed, enabled, and running
+- [ ] Accessed site from internet via domain
+- [ ] First user account registered
+- [ ] File upload/download tested
+- [ ] Media streaming tested
 
 ---
 
-## Your Setup Summary
+## Final Setup Summary
 
-Once complete, you'll have:
+Once complete you will have:
 
-✅ Flask app running on `http://127.0.0.1:8080` (local only)  
-✅ Cloudflare Tunnel connecting to `https://server.yourdomain.com`  
-✅ MongoDB storing user accounts locally  
-✅ Files stored in `~/fileserver-data/`  
-✅ All services auto-start on boot  
-✅ Works perfectly with mobile hotspot  
-✅ Secure HTTPS automatically via Cloudflare  
-✅ No port forwarding needed  
-✅ No static IP needed
+| Component | Details |
+|-----------|---------|
+| Flask app | Running on `http://127.0.0.1:8080` (local only) |
+| Cloudflare Tunnel | Securely exposes app at `https://server.yourdomain.com` |
+| MongoDB | Running locally on port 27017, storing user accounts |
+| File storage | Stored in `~/fileserver-data/` |
+| Auto-start | All services start on boot via systemd |
+| HTTPS | Automatic via Cloudflare — no certificate management needed |
+| Port forwarding | Not required — tunnel is outbound only |
+| Static IP | Not required |
+| Hotspot compatibility | ✅ Full support |
 
----
-
-## Support & Next Steps
-
-If you encounter issues:
-
-1. Check the Troubleshooting section
-2. Review logs for error messages
-3. Verify each step was completed
-4. Check Cloudflare dashboard for tunnel status
-
-**Congratulations!** Your home file server is now accessible from anywhere on the internet! 🎉
+**Congratulations! Your home file server is now accessible from anywhere on the internet. 🎉**
