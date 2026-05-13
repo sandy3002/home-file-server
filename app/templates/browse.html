@@ -248,7 +248,9 @@
                     {% endif %}
                     <button
                       class="btn btn-outline-danger"
-                      onclick="deleteItem('{{ item.path }}', {{ item.is_dir | tojson | lower }})"
+                      data-path="{{ item.path }}"
+                      data-is-dir="{{ 'true' if item.is_dir else 'false' }}"
+                      onclick="deleteItem(this.dataset.path, this.dataset.isDir === 'true')"
                       title="Delete"
                     >
                       <i class="bi bi-trash"></i>
