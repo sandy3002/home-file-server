@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from pymongo import MongoClient
 
 db = None

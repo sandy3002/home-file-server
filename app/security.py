@@ -1,4 +1,5 @@
 from functools import wraps
+# pyrefly: ignore [missing-import]
 from flask import session, redirect, url_for
 
 def add_security_headers(response):

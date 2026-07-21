@@ -1,4 +1,6 @@
+# pyrefly: ignore [missing-import]
 import os
+# pyrefly: ignore [missing-import]
 from flask import Flask
 from .config import Config
 from .extensions import init_db

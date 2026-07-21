@@ -3,7 +3,7 @@ services:
     build: .
     container_name: home-file-server
     ports:
-      - '8080:8080'
+      - '127.0.0.1:8080:8080'
     volumes:
       # Mount a local directory for persistent file storage
       - ./data:/app/data
@@ -20,7 +20,7 @@ services:
           'CMD',
           'python',
           '-c',
-          "import requests; requests.get('http://localhost:8080', timeout=3)",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8080', timeout=3)",
         ]
       interval: 30s
       timeout: 3s
