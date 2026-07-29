@@ -7,3 +7,6 @@ data/
 app/__pycache__/
 __pycache__/
 *.pyc
+
+graphify-out/
+.github/
