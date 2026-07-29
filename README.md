@@ -4,7 +4,7 @@ A self-hosted web file server built with Flask that lets you browse, upload, dow
 
 ## Features
 
-- Login/Register available (only 1 user at a time, add user creation and management next)
+- Login/Register available (user creation and management will be coming next)
 - Upload, Download, Browse files.
 - In-browser image, pdf, video and audio streaming available
 
@@ -56,15 +56,15 @@ The server starts on `http://127.0.0.1:8080` by default.
 
 All settings are read from environment variables (`.env` file):
 
-| Variable             | Default                        | Description                                             |
-|----------------------|--------------------------------|---------------------------------------------------------|
-| `SECRET_KEY`         | `dev-key-change-in-production` | Flask session secret — **always change in production**  |
-| `MONGODB_URI`        | *(required)*                   | MongoDB connection string (e.g. `mongodb://localhost:27017/`) |
-| `UPLOAD_FOLDER`      | `~/Documents/FileServer`       | Directory where uploaded files are stored               |
-| `FLASK_ENV`          | `development`                  | `production` disables debug mode and enables secure cookies |
-| `HOST`               | `127.0.0.1`                    | IP address to bind on (`0.0.0.0` to expose on network)  |
-| `PORT`               | `8080`                         | Port the server listens on                              |
-| `MAX_CONTENT_LENGTH` | `10737418240` (10 GB)          | Maximum upload size in bytes                            |
+| Variable             | Default                        | Description                                                   |
+| -------------------- | ------------------------------ | ------------------------------------------------------------- |
+| `SECRET_KEY`         | `dev-key-change-in-production` | Flask session secret — **always change in production**        |
+| `MONGODB_URI`        | _(required)_                   | MongoDB connection string (e.g. `mongodb://localhost:27017/`) |
+| `UPLOAD_FOLDER`      | `~/Documents/FileServer`       | Directory where uploaded files are stored                     |
+| `FLASK_ENV`          | `development`                  | `production` disables debug mode and enables secure cookies   |
+| `HOST`               | `127.0.0.1`                    | IP address to bind on (`0.0.0.0` to expose on network)        |
+| `PORT`               | `8080`                         | Port the server listens on                                    |
+| `MAX_CONTENT_LENGTH` | `10737418240` (10 GB)          | Maximum upload size in bytes                                  |
 
 > Relative paths in `UPLOAD_FOLDER` are resolved relative to the project root. `~` is expanded automatically.
 
@@ -84,25 +84,7 @@ Go to `/upload`, then drag-and-drop files or click to select. You can optionally
 
 ### Media Streaming
 
-In-browser streaming is supported for video and audio files with HTTP Range request support for efficient seeking.
-
-## API Routes
-
-| Method | Path                          | Description                     |
-|--------|-------------------------------|---------------------------------|
-| GET    | `/browse[/<path>]`            | File browser                    |
-| GET    | `/upload`                     | Upload page                     |
-| POST   | `/upload`                     | Upload files (returns JSON)     |
-| GET    | `/download/<path>`            | Download a file                 |
-| POST   | `/api/delete/<path>`          | Delete file or empty folder     |
-| POST   | `/api/create_folder`          | Create a new folder             |
-| GET    | `/stream/<path>`              | Render video/audio player page  |
-| GET    | `/media/<path>`               | Serve media with Range support  |
-| GET    | `/login`                      | Login page                      |
-| POST   | `/login`                      | Authenticate                    |
-| GET    | `/register`                   | Registration page               |
-| POST   | `/register`                   | Create account                  |
-| GET    | `/logout`                     | Clear session                   |
+In-browser streaming is supported for video and audio files.
 
 ## Network Access
 
@@ -117,4 +99,8 @@ Then access from other devices using `http://<YOUR_IP>:8080`.
 
 ## License
 
-Open source. Feel free to modify and distribute as needed.
+Open source. Feel free to modify and distribute as you wish.
+
+## Disclaimer
+
+This project is created by AI and me.
